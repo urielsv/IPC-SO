@@ -1,4 +1,4 @@
-// 1. Recibir input los archivos (./md5 files/*) 
+// 1. Recibir input los archivos (./md5 files/*)
 // No hay falta expandir el *
 // podemos usar pipes por ejemplo ./md5 files/* | ./view
 
@@ -18,13 +18,18 @@
 
 #define MAX_FILES           100
 #define MAX_SLAVES          3
-#define REQUIRED_ARGS       1
+#define REQUIRED_ARGS       2
+#define SLAVE_PATH          "./slave"
 
+/*
+ * Calculate the number of files per slave
+ */
+#define FILES_PER_SLAVE(files) ((files + MAX_SLAVES - 1) / MAX_SLAVES)
 
-int assignSlaves(char *argv[], int filesPerSlave);
-int initSlaves(char *argv[], int filesPerSlave);
-void createSlave(char *files[]);
-int filesPerSlave(int files_count);
+int assign_slaves(char *argv[], int filesPerSlave);
+int init_slaves(char *argv[], int filesPerSlave);
+void create_slave(char *files[]);
+static void check_program_path(char *path);
 
 int main(int argc, char* argv[]) {
     if (argc < REQUIRED_ARGS) {
@@ -39,45 +44,58 @@ int main(int argc, char* argv[]) {
     }
 
 
-    int files_count = filesPerSlave(argc - 1);
-    assignSlaves(argv, files_count);
-    
-    
-    
+    int files_count = FILES_PER_SLAVE(argc - 1);
+    assign_slaves(argv, files_count);
+
     return 0;
 }
 
-int assignSlaves(char *argv[], int files_count) {
-    struct dirent *entry; // Contains the name of the file
-    struct stat file_stat; // Contains the file information
-
-
-    initSlaves(argv, filesPerSlave);
+int assign_slaves(char *argv[], int files_count) {
+    init_slaves(argv, files_count);
+    return 0;
 }
 
-int initSlaves(char *argv[], int filesPerSlave) {
+/*
+ * Initialize the slave processes
+ */
+int init_slaves(char *argv[], int files_count) {
     int files_assigned = 0;
     for (int i = 0; i < MAX_SLAVES; i++) {
-        char* files[filesPerSlave];
-        for (int j = 0; j < filesPerSlave; j++) {
+        char* files[files_count];
+        for (int j = 0; j < files_count; j++) {
             files[j] = argv[files_assigned + j];
         }
-        createSlave(files);
-        files_assigned += filesPerSlave;
+        create_slave(files);
+        files_assigned += files_count;
     }
+    return 0;
 }
 
-void createSlave(char *files[]){
+/*
+ * Create a slave process
+ * @param files_path: The path to the files to process
+ */
+void create_slave(char *files_path[]){
     pid_t pid = fork();
     if (pid < 0){
         fprintf(stderr, "Error: Could not create slave\n");
-        return 1;
+        perror("fork");
+        exit(EXIT_FAILURE);
     }
+
+    // Child process
     if (pid == 0){
-        execve("./slave", files, NULL); //ejecuto el esclavo
+        char *const files[] = { (char *)files_path, NULL };
+        char *const envp[] = { NULL };
+
+        check_program_path(SLAVE_PATH);
+        execve(SLAVE_PATH, files, envp);
     }
 }
 
-int filesPerSlave(int files_count) {
-    return (files_count + MAX_SLAVES - 1) / MAX_SLAVES;
+static void check_program_path(char *path) {
+    if (access(path, F_OK) == -1) {
+        fprintf(stderr, "Error: Could not find %s\n", path);
+        exit(EXIT_FAILURE);
+    }
 }

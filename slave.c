@@ -34,7 +34,7 @@ void create_slave(slave_t* slave, FILE** files, uint64_t files_count) {
     slave->ppid = getppid();
 }
 
-int generateMD5(slave_t* slave) {
+int generate_MD5(slave_t* slave) {
     // Generate MD5
 
     return 0;
