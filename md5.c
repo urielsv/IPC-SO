@@ -2,7 +2,6 @@
 // No hay falta expandir el *
 // podemos usar pipes por ejemplo ./md5 files/* | ./view
 
-
 // 2. Iniciar procesos esclavos
 
 // 3. Distribuir archivos entre distintos esclavlos
@@ -15,21 +14,19 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include "md5.h"
 
-#define MAX_FILES           100
-#define MAX_SLAVES          3
-#define REQUIRED_ARGS       2
-#define SLAVE_PATH          "./slave"
+#define MAX_FILES               100
+#define MAX_INITIAL_FILES       10
+#define MAX_SLAVES              3
+#define REQUIRED_ARGS           2
+#define SLAVE_PATH              "./slave"
 
 /*
  * Calculate the number of files per slave
  */
-#define FILES_PER_SLAVE(files) ((files + MAX_SLAVES - 1) / MAX_SLAVES)
+#define files_per_slave(files) ((files + MAX_SLAVES - 1) / MAX_SLAVES)
 
-int assign_slaves(char *argv[], int filesPerSlave);
-int init_slaves(char *argv[], int filesPerSlave);
-void create_slave(char *files[]);
-static void check_program_path(char *path);
 
 int main(int argc, char* argv[]) {
     if (argc < REQUIRED_ARGS) {
@@ -37,33 +34,49 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    DIR* dir;
-    if (!(dir = opendir(argv[1]))) {
-        fprintf(stderr, "Error: Could not open directory\n");
-        return 1;
+    /* Validate paths */
+    for (int i = 1; i < argc; i++) {
+        struct stat path_stat;
+        if (stat(argv[i], &path_stat) != 0) {
+            fprintf(stderr, "Error: Could not find %s\n", argv[i]);
+            return 1;
+        }
     }
 
+    /* TEMP: Print the argv paths */
+    for (int i = 1; i < argc; i++) {
+        printf("argv[%d] = %s\n", i, argv[i]);
+    }
 
-    int files_count = FILES_PER_SLAVE(argc - 1);
-    assign_slaves(argv, files_count);
+    // DIR* dir;
+    // if (!(dir = opendir(argv[1]))) {
+    //     fprintf(stderr, "Error: Could not open directory\n");
+    //     return 1;
+    // }
 
+    init_slaves(argv, MAX_INITIAL_FILES / MAX_SLAVES);
+    int files_count = files_per_slave(argc - 1);
+
+    /* Then process files starting from MAX_INITIAL_FILES + 1 */
     return 0;
 }
 
 int assign_slaves(char *argv[], int files_count) {
-    init_slaves(argv, files_count);
+
     return 0;
 }
 
 /*
  * Initialize the slave processes
+ * @param files_path: The path to the files to process
+ * @param files_count: The number of files to process per slave
  */
-int init_slaves(char *argv[], int files_count) {
+int init_slaves(char *files_path[], int files_count) {
     int files_assigned = 0;
     for (int i = 0; i < MAX_SLAVES; i++) {
         char* files[files_count];
         for (int j = 0; j < files_count; j++) {
-            files[j] = argv[files_assigned + j];
+            files[j] = files_path[files_assigned + j];
         }
         create_slave(files);
         files_assigned += files_count;
