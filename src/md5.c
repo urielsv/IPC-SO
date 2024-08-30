@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <dirent.h>
-#include "md5.h"
+#include "../include/md5.h"
 
 #define MAX_FILES               100
 #define MAX_INITIAL_FILES       10
@@ -28,7 +28,7 @@
 #define files_per_slave(files) ((files + MAX_SLAVES - 1) / MAX_SLAVES)
 
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *const argv[]) {
     if (argc < REQUIRED_ARGS) {
         printf("Usage: %s <files> ...", argv[0]);
         return 1;
@@ -98,11 +98,14 @@ void create_slave(char *files_path[]){
 
     // Child process
     if (pid == 0){
+        printf("Child process\n");
         char *const files[] = { (char *)files_path, NULL };
         char *const envp[] = { NULL };
 
         check_program_path(SLAVE_PATH);
         execve(SLAVE_PATH, files, envp);
+        perror("execve");
+        exit(EXIT_FAILURE);
     }
 }
 

@@ -9,11 +9,10 @@
 typedef struct slave_t {
     int pid;
     int ppid;
-    FILE** files;
-    uint64_t files_count;
-    char md5[ENC_SIZE]; //char[] md5 = char[enc_size]
+    char *file_path;
+    char md5[ENC_SIZE];
 } slave_t;
 
-void create_slave(slave_t* slave, FILE** files, uint64_t files_count);
-
+void create_slave(slave_t* slave, char *const file_path);
+char *get_md5(char *const file_path);
 #endif
