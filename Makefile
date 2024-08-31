@@ -5,14 +5,14 @@ CC=gcc
 
 all: md5 slave view
 
-md5: md5.o
-	$(CC) $(CFLAGS) -o md5 md5.o $(LDFLAGS)
+md5: md5
+	$(CC) $(CFLAGS) src/md5.c -o md5 $(LDFLAGS)
 
-slave: slave.o
-	$(CC) $(CFLAGS) -o slave slave.o $(LDFLAGS)
+slave: slave
+	$(CC) $(CFLAGS) src/slave.c -o  slave $(LDFLAGS)
 
-view: view.o
-	$(CC) $(CFLAGS) -o view view.o $(LDFLAGS)
+view: view
+	$(CC) $(CFLAGS) src/view.c -o view $(LDFLAGS)
 
 clean:
 	rm -f md5 slave view *.o

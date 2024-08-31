@@ -7,28 +7,23 @@
 #include <sys/stat.h>
 #include "../include/slave.h"
 
-#define REQUIRED_ARGS 2
 
+#define ENC_SIZE 33
+#define BUFF_SIZE 256
 int main(int argc, char *const argv[]) {
-    printf("Hello im slave pid: %d, ppid: %d\n", getpid(), getppid());
+    // printf("Hello im slave pid: %d, ppid: %d\n", getpid(), getppid());
 
-    if (argc != REQUIRED_ARGS) {
-        fprintf(stderr, "Usage: %s <file1>\n", argv[0]);
-        return 1;
-    }
+    char md5[ENC_SIZE];
+    // Read the file path from the pipe
 
-    slave_t *slave = (slave_t *) malloc(sizeof(slave_t));
-    create_slave(slave, argv[1]);
+    char file_path[BUFF_SIZE];
+    read(STDIN_FILENO, file_path, BUFF_SIZE);
+    get_md5(file_path);
     return 0;
 }
 
-void create_slave(slave_t *slave, char *const file_path) {
-    slave->file_path = file_path;
-    slave->pid = getpid();
-    slave->ppid = getppid();
-}
-
 char *get_md5(char *const file_path) {
+    printf("Slave read: %s\n", file_path);
 
     return NULL;
 }
