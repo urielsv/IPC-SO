@@ -31,11 +31,11 @@
 /*
  * Calculate the number of files per slave
  */
-#define files_per_slave(files) (files < MAX_INITIAL_FILES ? files : MAX_INITIAL_FILES / MAX_SLAVES)
+#define files_per_slave(files) (files < MAX_SLAVES ? 1 : 2)
 
 int main(int argc, char *const argv[]) {
     if (argc < REQUIRED_ARGS) {
-        printf("Usage: %s <files> ...", argv[0]);
+        printf("Usage: %s <files>", argv[0]);
         return 1;
     }
 
@@ -57,28 +57,58 @@ int main(int argc, char *const argv[]) {
     // Initialize the slaves memory
     for (int i = 0; i < MAX_SLAVES; i++) {
         slaves[i] = (slave_t *) malloc(sizeof(slave_t));
-    }    
+        if (slaves[i] == NULL) {
+            fprintf(stderr, "Error: Could not allocate memory for slave\n");
+            perror("malloc");
+            exit(EXIT_FAILURE);
+        }
+    }
 
     uint32_t files_assigned = 0;
-    files_assigned = init_slaves(argv, files_per_slave(argc-1), slaves);
+    files_assigned = init_slaves(argv, files_per_slave(argc), slaves);
 
-    // Assign the rest of the files to the slaves
-    while(argv[files_assigned] != NULL) {
-        char *file_path = argv[files_assigned++];
-        assign_files(&slaves[0], file_path, 1); 
+    // // Assign the rest of the files to the slaves
+    // while(argv[files_assigned] != NULL) {
+    //     char *file_path = argv[files_assigned++];
+    //     assign_files(slaves[0], &file_path, 1);
+    // }
+
+    // free slaves
+    for (int i = 0; i < MAX_SLAVES; i++) {
+        waitpid(slaves[i]->pid, NULL, 0);
+        free(slaves[i]);
     }
 
     return 0;
 }
 
-int assign_files(slave_t *slave, char *const files_path[], int files_count) {
-    // Send the files to the slave via the pipe using close, dup2
-
-    for (int i = 0; i < files_count; i++) {
-        write(slave->pipefd[1], files_path[i], strlen(files_path[i]));
+/**
+ * Assign files to a slave by writing file paths to the slave's pipe.
+ * @param slave: The slave process structure containing pipe file descriptors.
+ * @param files_path: Array of file paths to be sent.
+ * @param files_count: Number of file paths to send.
+ * @return: 0 on success, -1 on failure.
+ */
+int assign_file(slave_t *slave, char *const file_path) {
+    if (slave == NULL || file_path == NULL) {
+        fprintf(stderr, "Error: Invalid arguments to assign_file.\n");
+        return -1;
     }
-    
-    
+
+    // Send the files to the slave via the pipe
+    size_t len = strlen(file_path) + 1;  // Include null terminator
+    ssize_t written = write(slave->pipefd[1], file_path, len);
+    if (written != len) {
+        perror("write");
+        return -1;
+    }
+
+    // Close the write end of the pipe after sending all file paths
+    if (close(slave->pipefd[1]) == -1) {
+        perror("close");
+        return -1;
+    }
+
     return 0;
 }
 
@@ -88,33 +118,30 @@ int assign_files(slave_t *slave, char *const files_path[], int files_count) {
  * @param files_count: The number of files to process per slave
  * @param slaves: The slave processes
  *
- * @return The number of files assigned total 
+ * @return The number of files assigned total
  */
-int init_slaves(char *files_path[], int files_count, slave_t **slaves) {
-    int files_assigned = 0;
+int init_slaves(char *argv[], int files_per_slave, slave_t **slaves) {
+    int argc = 0;
     for (int i = 0; i < MAX_SLAVES; i++) {
 
-        // Assign initial files per slaves
-        char* files[files_count];
-        for (int j = 0; j < files_count && files_path != NULL; j++) {
-            files[j] = files_path[files_assigned + j];
-        }
-
-        create_slave(slaves[i]);
-        
-
-        // Initialize the pipe
+        // Create the pipe
         if (pipe(slaves[i]->pipefd) == -1) {
-            fprintf(stderr, "Error: Could not create pipe for pid: %d\n", slaves[i]->pid);
+            fprintf(stderr, "Error: Could not create pipe\n");
             perror("pipe");
             exit(EXIT_FAILURE);
         }
 
+        // Create the slave
+        create_slave(slaves[i]);
+
+
         //Assign initial files to slave
-        assign_files(slaves[i], files, files_count);
-        files_assigned += files_count;
+        for (int j = 0; j < files_per_slave && argv[argc+1] != NULL; j++) {
+            // start incrementing to avoid argv[0].
+            assign_file(slaves[i], argv[++argc]);
+        }
     }
-    return files_assigned;
+    return argc-1;
 }
 
 /*
@@ -131,23 +158,39 @@ pid_t create_slave(slave_t *slave) {
 
     // fork succeeded, child process
     if (pid == 0) {
-        slave->pid = getpid();
-        char *const argv[] = { NULL };
-        char *const envp[] = { NULL };
 
-        close(slave->pipefd[1]);
-        dup2(slave->pipefd[0], STDIN_FILENO);
-        dup2(slave->pipefd[1], STDOUT_FILENO);
+        // Close the write end of the pipe because we are only writing
+        if (close(slave->pipefd[1]) == -1) {
+            perror("close");
+            exit(EXIT_FAILURE);
+        }
+
+        // Redirect stdin to the read end of the pipe
+        if (dup2(slave->pipefd[0], STDIN_FILENO) == -1) {
+            perror("dup2");
+            exit(EXIT_FAILURE);
+        }
+        // if (close(slave->pipefd[0]) == -1) {
+        //     perror("close");
+        //     exit(EXIT_FAILURE);
+        // }
 
         check_program_path(SLAVE_PATH);
-        execve(SLAVE_PATH, argv, envp);
+        execve(SLAVE_PATH, NULL, NULL);
         perror("execve");
-        exit(EXIT_FAILURE); 
-    }else{
-        close(slave->pipefd[0]);
+        exit(EXIT_FAILURE);
+    } else {
+        // parent process
+        // Save the pid and close the write end of the pipe because we are only reading
+        slave->pid = pid;
+        if (close(slave->pipefd[0]) == -1) {
+            perror("close");
+            exit(EXIT_FAILURE);
+        }
+
     }
 
-    printf("Child process with pid: %d\n", getpid());
+    printf("Slave process with pid: %d\n", slave->pid);
     return pid;
 }
 
