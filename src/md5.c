@@ -64,7 +64,7 @@ int main(int argc, char *const argv[]) {
         }
     }
 
-    uint32_t files_assigned = 0;
+    uint32_t files_assigned;
     files_assigned = init_slaves(argv, files_per_slave(argc), slaves);
 
     // // Assign the rest of the files to the slaves
@@ -120,7 +120,7 @@ int assign_file(slave_t *slave, char *const file_path) {
  *
  * @return The number of files assigned total
  */
-int init_slaves(char *argv[], int files_per_slave, slave_t **slaves) {
+int init_slaves(char *const argv[], int files_per_slave, slave_t **slaves) {
     int argc = 0;
     for (int i = 0; i < MAX_SLAVES; i++) {
 
