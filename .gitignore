@@ -1,0 +1,6 @@
+*.o
+*.bin
+src/*.o
+src/*.bin
+.vscode/
+.idea
