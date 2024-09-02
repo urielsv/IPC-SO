@@ -31,7 +31,7 @@
 /*
  * Calculate the number of files per slave
  */
-#define files_per_slave(files) (files < MAX_SLAVES ? 1 : 2)
+#define files_per_slave(files) (files <= MAX_SLAVES ? 1 : 2)
 
 int main(int argc, char *const argv[]) {
     if (argc < REQUIRED_ARGS) {
@@ -48,10 +48,6 @@ int main(int argc, char *const argv[]) {
         }
     }
 
-    /* TEMP: Print the argv paths */
-    for (int i = 1; i < argc; i++) {
-        printf("argv[%d] = %s\n", i, argv[i]);
-    }
 
     slave_t *slaves[MAX_SLAVES];
     // Initialize the slaves memory
@@ -65,7 +61,8 @@ int main(int argc, char *const argv[]) {
     }
 
     uint32_t files_assigned;
-    files_assigned = init_slaves(argv, files_per_slave(argc), slaves);
+    printf("%d", files_per_slave(argc-1));
+    files_assigned = init_slaves(argv, files_per_slave(argc-1), slaves);
 
     // // Assign the rest of the files to the slaves
     // while(argv[files_assigned] != NULL) {
@@ -83,7 +80,7 @@ int main(int argc, char *const argv[]) {
 }
 
 /**
- * Assign files to a slave by writing file paths to the slave's pipe.
+ * Assign file to a slave by writing file paths to the slave's pipe.
  * @param slave: The slave process structure containing pipe file descriptors.
  * @param files_path: Array of file paths to be sent.
  * @param files_count: Number of file paths to send.
@@ -95,7 +92,12 @@ int assign_file(slave_t *slave, char *const file_path) {
         return -1;
     }
 
-    // Send the files to the slave via the pipe
+    // Debug
+    // pipefd[0] is the read end of the pipe
+    // pipefd[1] is the write end of the pipe
+    printf("Assigning file %s to slave %d, using fds: %d (read), and %d (write)\n",
+        file_path, slave->pid, slave->pipefd[0], slave->pipefd[1]);
+    // Send the file to the slave via the pipe
     size_t len = strlen(file_path) + 1;  // Include null terminator
     ssize_t written = write(slave->pipefd[1], file_path, len);
     if (written != len) {
@@ -103,11 +105,20 @@ int assign_file(slave_t *slave, char *const file_path) {
         return -1;
     }
 
+    // read from the pipe
+    // char buffer[1024];
+    // ssize_t bytes_read = read(slave->pipefd[0], buffer, sizeof(buffer));
+    // printf("%s", buffer);
+    // if (bytes_read == -1) {
+    //     perror("read");
+    //     return -1;
+    // }
+
     // Close the write end of the pipe after sending all file paths
-    if (close(slave->pipefd[1]) == -1) {
-        perror("close");
-        return -1;
-    }
+    // if (close(slave->pipefd[1]) == -1) {
+    //     perror("close");
+    //     return -1;
+    // }
 
     return 0;
 }
@@ -134,11 +145,13 @@ int init_slaves(char *const argv[], int files_per_slave, slave_t **slaves) {
         // Create the slave
         create_slave(slaves[i]);
 
-
         //Assign initial files to slave
         for (int j = 0; j < files_per_slave && argv[argc+1] != NULL; j++) {
             // start incrementing to avoid argv[0].
-            assign_file(slaves[i], argv[++argc]);
+            if (assign_file(slaves[i], argv[++argc]) == -1) {
+                fprintf(stderr, "Error: Could not assign file to slave\n");
+                exit(EXIT_FAILURE);
+            }
         }
     }
     return argc-1;
@@ -159,7 +172,7 @@ pid_t create_slave(slave_t *slave) {
     // fork succeeded, child process
     if (pid == 0) {
 
-        // Close the write end of the pipe because we are only writing
+
         if (close(slave->pipefd[1]) == -1) {
             perror("close");
             exit(EXIT_FAILURE);
@@ -170,10 +183,11 @@ pid_t create_slave(slave_t *slave) {
             perror("dup2");
             exit(EXIT_FAILURE);
         }
-        // if (close(slave->pipefd[0]) == -1) {
-        //     perror("close");
-        //     exit(EXIT_FAILURE);
-        // }
+
+        if (close(slave->pipefd[0]) == -1) {
+            perror("close");
+            exit(EXIT_FAILURE);
+        }
 
         check_program_path(SLAVE_PATH);
         execve(SLAVE_PATH, NULL, NULL);
@@ -187,7 +201,6 @@ pid_t create_slave(slave_t *slave) {
             perror("close");
             exit(EXIT_FAILURE);
         }
-
     }
 
     printf("Slave process with pid: %d\n", slave->pid);

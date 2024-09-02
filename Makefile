@@ -1,4 +1,3 @@
-
 CFLAGS=-Wall -g
 LDFLAGS=-lm
 CC=gcc
