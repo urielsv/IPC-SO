@@ -7,7 +7,7 @@
 #include "include/slave.h"
 #include "include/utils.h"
 
-#define ENC_SIZE        33
+#define ENC_SIZE        32
 #define BUFF_SIZE       256
 #define MD5SUM_PATH     "/usr/bin/md5sum"
 
@@ -24,7 +24,7 @@ int main(int argc, char *const argv[]) {
 }
 
 void get_md5(char *const file_path) {
-    char cmd[BUFF_SIZE + 10];
+    char cmd[BUFF_SIZE];
     snprintf(cmd, sizeof(cmd), "%s %s", MD5SUM_PATH, file_path);
 
     FILE *fp = popen(cmd, "r");
@@ -33,17 +33,17 @@ void get_md5(char *const file_path) {
         exit(EXIT_FAILURE);
     }
 
-    char result[BUFF_SIZE];
+    // md5 hash has a length of 32 + null terminated
+    char result[ENC_SIZE+1];
     if (fgets(result, sizeof(result), fp) == NULL) {
         pclose(fp);
-        fprintf(stderr, "fgets failed\n");
         perror("fgets");
         exit(EXIT_FAILURE);
     }
 
-    fprintf(stderr, "MD5: %s\n", result);
-    fprintf(STDOUT_FILENO, "MD5: %s\n", result);
-    write(STDOUT_FILENO, result, BUFF_SIZE);
+    //el maldito null terminated chaval
+    result[ENC_SIZE] = '\0';
+    write(STDOUT_FILENO, result, ENC_SIZE);
     if (pclose(fp) == -1) {
         perror("pclose");
         exit(EXIT_FAILURE);

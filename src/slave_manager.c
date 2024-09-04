@@ -101,6 +101,8 @@ int assign_file(slave_t *slave, char *const file_path) {
         return -1;
     }
 
+    slave->file_path = file_path;
+
     // TEMP: Debug
     printf("(master) Assigning file %s to slave %d, using fds: %d \
          (write to slave, master2_slave), and %d (write to master, slave2_master)\n",
@@ -116,7 +118,6 @@ int assign_file(slave_t *slave, char *const file_path) {
 //select
 int output_from_slaves(slave_t **slaves, uint16_t slave_count) {
     fd_set read_fds;
-    struct timeval timeout;
 
     FD_ZERO(&read_fds);
     int max_fd = -1;
@@ -133,12 +134,8 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count) {
         }
     }
 
-    // Set timeout (optional)
-    timeout.tv_sec = 5;  // 5 seconds timeout
-    timeout.tv_usec = 0;
-
     // todo -> utils.h function
-    int ready = select(max_fd + 1, &read_fds, NULL, NULL, &timeout);
+    int ready = select(max_fd + 1, &read_fds, NULL, NULL, NULL);
     if (ready == -1) {
         perror("select");
         return -1;
@@ -156,7 +153,7 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count) {
             // print the output from the slave temp
             if (bytes_read > 0) {
                 buffer[bytes_read] = '\0';
-                printf("%s", buffer);
+                printf("Printing from master: %s (%s)\n", buffer, slaves[i]->file_path);
             }
         }
     }
@@ -178,24 +175,10 @@ pid_t create_slave(slave_t *slave) {
         // Child process
 
         // MASTER (write) -> SLAVE (read)
-        // We close the master2_slave_fd[0] because we are only writing to the slave
-        close_pipe(slave->master2_slave_fd[1], "master to slave pipe");
-        // Redirect the master2_slave_fd (read) to STDIN_FILENO
-        dup2_pipe(slave->master2_slave_fd[0], STDIN_FILENO, "master to slave pipe");
-        // We close the master2_slave_fd[0] because we are only writing to the slave
-        close_pipe(slave->master2_slave_fd[0], "master to slave pipe");
-
+        close_end_and_dup2(slave->master2_slave_fd[0], STDIN_FILENO, slave->master2_slave_fd[1], "master to slave pipe");
     
         // SLAVE (write) -> MASTER (read)
-        // We close slave2_master_fd[1] because we are only reading from the slave
-        close_pipe(slave->slave2_master_fd[0], "slave process");
-
-        // Redirect the slave2_master_fd (write) to STDOUT_FILENO
-        dup2_pipe(slave->slave2_master_fd[1], STDOUT_FILENO, "slave process");  
-
-        // We close the slave2_master_fd[1] because we are only reading from the slave
-        close_pipe(slave->slave2_master_fd[1], "slave process");
-        
+        close_end_and_dup2(slave->slave2_master_fd[1], STDOUT_FILENO, slave->slave2_master_fd[0], "slave to master pipe"); 
        
         check_program_path(SLAVE_PATH);
         char* const argv[] = {SLAVE_PATH, NULL};
