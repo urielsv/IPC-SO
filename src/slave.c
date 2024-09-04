@@ -10,9 +10,8 @@
 #define ENC_SIZE 33
 #define BUFF_SIZE 256
 int main(int argc, char *const argv[]) {
-    // printf("Hello im slave pid: %d, ppid: %d\n", getpid(), getppid());
 
-    char md5[ENC_SIZE];
+    // char md5[ENC_SIZE];
     // Read the file path from the pipe
 
     char file_path[BUFF_SIZE];
@@ -61,6 +60,6 @@ char *get_md5(char *const file_path) {
         wait(NULL);
     }
     // TEMP print the slave with pid and the file path analyzed
-    printf("slave (%d): reading %s\n", pid, file_path);
+    printf("(slave pid: %d) reading %s\n", pid, file_path);
     return NULL;
 }

@@ -22,18 +22,14 @@
 #include "include/slave_manager.h"
 #include "include/utils.h"
 
-#define MAX_FILES               100
-#define MAX_INITIAL_FILES       10
 #define SLAVE_PATH              "./slave"
 
 /*
  * Calculate the number of files per slave
  */
-#define files_per_slave(files) (files <= MAX_SLAVES ? 1 : 2)
 
-
-static void malloc_slave(slave_t *slave) {
-    slave = (slave_t *) malloc(sizeof(slave_t));
+static void malloc_slave(slave_t **slave) {
+    *slave = (slave_t *) malloc(sizeof(slave_t));
     if (slave == NULL) {
         fprintf(stderr, "Error: Could not allocate memory for slave\n");
         perror("malloc");
@@ -59,6 +55,7 @@ void free_slave(slave_t *slave) {
  * @return The number of files assigned total
  */
 int init_slaves(char *const argv[], uint32_t files_per_slave, slave_t **slaves, uint16_t max_slaves) {
+        
 
     if (argv == NULL || slaves == NULL) {
         fprintf(stderr, "Error: Invalid arguments to init_slaves.\n");
@@ -67,21 +64,18 @@ int init_slaves(char *const argv[], uint32_t files_per_slave, slave_t **slaves, 
 
     // Allocate the slaves memory
     for (int i = 0; i < max_slaves; i++) {
-        malloc_slave(slaves[i]);
+        malloc_slave(&slaves[i]);
     }
 
     int argc = 0;
     for (int i = 0; i < max_slaves; i++) {
 
         // Create the pipe
-
         create_pipe(slaves[i]->pipefd, "slave initialization");
-
 
         // Create the slave
         create_slave(slaves[i]);
 
-        //Assign initial files to slave
         for (int j = 0; j < files_per_slave && argv[argc+1] != NULL; j++) {
             // start incrementing to avoid argv[0].
             if (assign_file(slaves[i], argv[++argc]) == -1) {
@@ -109,15 +103,11 @@ int assign_file(slave_t *slave, char *const file_path) {
     // Debug
     // pipefd[0] is the read end of the pipe
     // pipefd[1] is the write end of the pipe
-    printf("Assigning file %s to slave %d, using fds: %d (read), and %d (write)\n",
+    printf("(master) Assigning file %s to slave %d, using fds: %d (read), and %d (write)\n",
         file_path, slave->pid, slave->pipefd[0], slave->pipefd[1]);
     // Send the file to the slave via the pipe
     size_t len = strlen(file_path) + 1;  // Include null terminator
-    ssize_t written = write(slave->pipefd[1], file_path, len);
-    if (written != len) {
-        perror("write");
-        return -1;
-    }
+    write_pipe(slave->pipefd[1], "assign_file", file_path, len);
 
     return 0;
 }
@@ -132,23 +122,13 @@ pid_t create_slave(slave_t *slave) {
 
     // fork succeeded, child process
     if (pid == 0) {
-
-
-        if (close(slave->pipefd[1]) == -1) {
-            perror("close");
-            exit(EXIT_FAILURE);
-        }
+        
+        close_pipe(slave->pipefd[1], "slave process");
 
         // Redirect stdin to the read end of the pipe
-        if (dup2(slave->pipefd[0], STDIN_FILENO) == -1) {
-            perror("dup2");
-            exit(EXIT_FAILURE);
-        }
+        dup2_pipe(slave->pipefd[0], STDIN_FILENO, "slave process");
 
-        if (close(slave->pipefd[0]) == -1) {
-            perror("close");
-            exit(EXIT_FAILURE);
-        }
+        close_pipe(slave->pipefd[0], "slave process");
 
         check_program_path(SLAVE_PATH);
         execve(SLAVE_PATH, NULL, NULL);
@@ -158,12 +138,8 @@ pid_t create_slave(slave_t *slave) {
         // parent process
         // Save the pid and close the write end of the pipe because we are only reading
         slave->pid = pid;
-        if (close(slave->pipefd[0]) == -1) {
-            perror("close");
-            exit(EXIT_FAILURE);
-        }
+        close_pipe(slave->pipefd[0], "slave process");
     }
 
-    printf("Slave process with pid: %d\n", slave->pid);
     return pid;
 }

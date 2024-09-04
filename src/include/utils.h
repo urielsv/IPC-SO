@@ -18,16 +18,10 @@
 #include <sys/_types/_pid_t.h>
 #include <unistd.h>
 
-static void inline create_pipe(int fd[2], char *const pipe_error) {
-    if (pipe(fd) == -1) {
-        fprintf(stderr, "Error: Could not create pipe during %s\n", pipe_error);
-        perror("pipe");
-        exit(EXIT_FAILURE);
-    }
-}
 
-void inline write_pipe(int fd, char *const pipe_error, char *const buffer, size_t len);
-void inline read_pipe(int fd, char *const pipe_error, char *const buffer, size_t len);
+void create_pipe(int fd[2], char *const pipe_error);
+ssize_t write_pipe(int fd, char *const pipe_error, char *const buffer, size_t len);
+ssize_t read_pipe(int fd, char *const pipe_error, char *const buffer, size_t len);
 void close_pipe(int fd, char *const pipe_error);
 void dup2_pipe(int fd1, int fd2, char *const pipe_error);
 void check_fork(pid_t pid, char *const fork_error);

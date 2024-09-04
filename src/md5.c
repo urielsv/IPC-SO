@@ -20,8 +20,26 @@
 
 #include "include/slave_manager.h"
 
-#define MAX_SLAVES              10
 #define REQUIRED_ARGS           2
+#define MIN_PERCENT_FILES       20
+#define DEFAULT_SLAVE_COUNT     3
+uint32_t initial_files_per_slave(uint32_t files, uint32_t slave_count) {
+    if(files < MIN_PERCENT_FILES) {
+        return 1;
+    }
+
+    uint32_t initial_files = (uint32_t) files * 10 / 100;
+    return (uint32_t) initial_files / slave_count;
+}
+
+uint32_t slave_count(uint32_t files) {
+    if (files < MIN_PERCENT_FILES) {
+        return files > DEFAULT_SLAVE_COUNT ? DEFAULT_SLAVE_COUNT : files;
+    } 
+    return (uint32_t) files * 5 / 100;
+}
+
+
 
 int main(int argc, char *const argv[]) {
     // Validate arguments
@@ -39,12 +57,18 @@ int main(int argc, char *const argv[]) {
         }
     }
 
-
-    int assigned_slaves = MAX_SLAVES;
+    // Initialize slaves
+    int files = argc - 1;
+    int assigned_slaves = slave_count(files);
     slave_t *slaves[assigned_slaves];
+    int init_files_per_slave = initial_files_per_slave(files, assigned_slaves);
 
-    int files_assigned;
-    files_assigned = init_slaves(argv, 2, slaves, assigned_slaves);
+    int files_assigned = 0;
+    files_assigned = init_slaves(argv, init_files_per_slave, slaves, assigned_slaves);
+    if (files_assigned == -1) {
+        fprintf(stderr, "Error: Could not initialize slaves\n");
+        return 1;
+    }
 
     /*
     Select and logic to keep processing files until finished

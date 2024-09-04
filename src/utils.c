@@ -5,25 +5,35 @@
 #include "include/utils.h"
 
 
-void inline write_pipe(int fd, char *const pipe_error, char *const buffer, size_t len) {
+void create_pipe(int fd[2], char *const pipe_error) {
+    if (pipe(fd) == -1) {
+        fprintf(stderr, "Error: Could not create pipe during %s\n", pipe_error);
+        perror("pipe");
+        exit(EXIT_FAILURE);
+    }
+}
+
+ssize_t write_pipe(int fd, char *const pipe_error, char *const buffer, size_t len) {
     ssize_t written = write(fd, buffer, len);
     if (written != len) {
         fprintf(stderr, "Error: Could not write to pipe during %s\n", pipe_error);
         perror("write");
         exit(EXIT_FAILURE);
     }
+    return written;
 }
 
-void inline read_pipe(int fd, char *const pipe_error, char *const buffer, size_t len) {
+ssize_t read_pipe(int fd, char *const pipe_error, char *const buffer, size_t len) {
     ssize_t nbytes = read(fd, buffer, len);
     if (nbytes == -1) {
         fprintf(stderr, "Error: Could not read from pipe during %s\n", pipe_error);
         perror("read");
         exit(EXIT_FAILURE);
     }
+    return nbytes;
 }
 
-void inline close_pipe(int fd, char *const pipe_error) {
+void close_pipe(int fd, char *const pipe_error) {
     if (close(fd) == -1) {
         fprintf(stderr, "Error: Could not close pipe during %s\n", pipe_error);
         perror("close");
@@ -31,7 +41,7 @@ void inline close_pipe(int fd, char *const pipe_error) {
     }
 }
 
-void inline dup2_pipe(int fd, int new_fd, char *const pipe_error) {
+void dup2_pipe(int fd, int new_fd, char *const pipe_error) {
     if (dup2(fd, new_fd) == -1) {
         fprintf(stderr, "Error: Could not duplicate pipe during %s\n", pipe_error);
         perror("dup2");
