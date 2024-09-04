@@ -70,10 +70,16 @@ int main(int argc, char *const argv[]) {
         return 1;
     }
 
+
+    while (1) {
+        output_from_slaves(slaves, assigned_slaves);
+    }
+
     /*
     Select and logic to keep processing files until finished
     while (1) { assign files to available slave }
     */
+
 
     // free slaves
     for (int i = 0; i < assigned_slaves; i++) {

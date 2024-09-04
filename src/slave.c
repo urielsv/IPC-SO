@@ -5,10 +5,12 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "include/slave.h"
+#include "include/utils.h"
 
+#define ENC_SIZE        33
+#define BUFF_SIZE       256
+#define MD5SUM_PATH     "/usr/bin/md5sum"
 
-#define ENC_SIZE 33
-#define BUFF_SIZE 256
 int main(int argc, char *const argv[]) {
 
     // char md5[ENC_SIZE];
@@ -16,50 +18,34 @@ int main(int argc, char *const argv[]) {
 
     char file_path[BUFF_SIZE];
     read(STDIN_FILENO, file_path, BUFF_SIZE);
+    fprintf(stderr, "Slave read: %s\n", file_path);
     get_md5(file_path);
     return 0;
 }
 
-char *get_md5(char *const file_path) {
-    int pipe_fd[2];
-    if (pipe(pipe_fd) == -1) {
-        perror("pipe");
+void get_md5(char *const file_path) {
+    char cmd[BUFF_SIZE + 10];
+    snprintf(cmd, sizeof(cmd), "%s %s", MD5SUM_PATH, file_path);
+
+    FILE *fp = popen(cmd, "r");
+    if (fp == NULL) {
+        perror("popen");
         exit(EXIT_FAILURE);
     }
 
-    pid_t pid = fork();
-    if (pid == -1) {
-        perror("fork");
+    char result[BUFF_SIZE];
+    if (fgets(result, sizeof(result), fp) == NULL) {
+        pclose(fp);
+        fprintf(stderr, "fgets failed\n");
+        perror("fgets");
         exit(EXIT_FAILURE);
     }
 
-    if (pid == 0) {
-        // Child process
-        close(pipe_fd[0]);
-        dup2(pipe_fd[1], STDOUT_FILENO);
-        // Close the original write end of the pipe
-        close(pipe_fd[1]);
-        char *const args[] = { "md5sum", file_path, NULL };
-        execve("/sbin/md5sum", args, NULL);
-        perror("execve");
+    fprintf(stderr, "MD5: %s\n", result);
+    fprintf(STDOUT_FILENO, "MD5: %s\n", result);
+    write(STDOUT_FILENO, result, BUFF_SIZE);
+    if (pclose(fp) == -1) {
+        perror("pclose");
         exit(EXIT_FAILURE);
-    } else {
-        // Parent process
-        // Close the write end of the pipe
-        close(pipe_fd[1]);
-
-        char buffer[BUFF_SIZE];
-        ssize_t nbytes;
-        // TEMP: Testing the read end of the pipe
-        while ((nbytes = read(pipe_fd[0], buffer, sizeof(buffer) - 1)) > 0) {
-            buffer[nbytes] = '\0';
-            printf("%s", buffer);
-        }
-        close(pipe_fd[0]);
-        // Wait for the child process to finish
-        wait(NULL);
     }
-    // TEMP print the slave with pid and the file path analyzed
-    printf("(slave pid: %d) reading %s\n", pid, file_path);
-    return NULL;
 }

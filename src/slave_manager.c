@@ -54,7 +54,7 @@ void free_slave(slave_t *slave) {
  *
  * @return The number of files assigned total
  */
-int init_slaves(char *const argv[], uint32_t files_per_slave, slave_t **slaves, uint16_t max_slaves) {
+int init_slaves(char *const argv[], uint32_t files_per_slave, slave_t **slaves, uint16_t slave_count) {
         
 
     if (argv == NULL || slaves == NULL) {
@@ -63,15 +63,16 @@ int init_slaves(char *const argv[], uint32_t files_per_slave, slave_t **slaves, 
     }
 
     // Allocate the slaves memory
-    for (int i = 0; i < max_slaves; i++) {
+    for (int i = 0; i < slave_count; i++) {
         malloc_slave(&slaves[i]);
     }
 
     int argc = 0;
-    for (int i = 0; i < max_slaves; i++) {
+    for (int i = 0; i < slave_count; i++) {
 
-        // Create the pipe
-        create_pipe(slaves[i]->pipefd, "slave initialization");
+        // Create the pipes
+        create_pipe(slaves[i]->master2_slave_fd, "master2 slave pipe initialization");
+        create_pipe(slaves[i]->slave2_master_fd, "slave2 master pipe initialization");
 
         // Create the slave
         create_slave(slaves[i]);
@@ -100,17 +101,69 @@ int assign_file(slave_t *slave, char *const file_path) {
         return -1;
     }
 
-    // Debug
-    // pipefd[0] is the read end of the pipe
-    // pipefd[1] is the write end of the pipe
-    printf("(master) Assigning file %s to slave %d, using fds: %d (read), and %d (write)\n",
-        file_path, slave->pid, slave->pipefd[0], slave->pipefd[1]);
-    // Send the file to the slave via the pipe
-    size_t len = strlen(file_path) + 1;  // Include null terminator
-    write_pipe(slave->pipefd[1], "assign_file", file_path, len);
+    // TEMP: Debug
+    printf("(master) Assigning file %s to slave %d, using fds: %d \
+         (write to slave, master2_slave), and %d (write to master, slave2_master)\n",
+        file_path, slave->pid, slave->master2_slave_fd[1], slave->slave2_master_fd[0]);
+
+    size_t len = strlen(file_path) + 1; 
+    write_pipe(slave->master2_slave_fd[1], "assign_file", file_path, len);
 
     return 0;
 }
+
+
+//select
+int output_from_slaves(slave_t **slaves, uint16_t slave_count) {
+    fd_set read_fds;
+    struct timeval timeout;
+
+    FD_ZERO(&read_fds);
+    int max_fd = -1;
+    for (int i = 0; i < slave_count; i++) {
+        if (slaves[i]->slave2_master_fd[0] < 0) {
+            fprintf(stderr, "Invalid file descriptor for slave %d\n", i);
+            return -1;
+        }
+        FD_SET(slaves[i]->slave2_master_fd[0], &read_fds);
+        if (slaves[i]->slave2_master_fd[0] > max_fd) {
+            // max_fd is the highest file descriptor in the set this means that 
+            // select will check all the file descriptors from 0 to max_fd
+            max_fd = slaves[i]->slave2_master_fd[0];
+        }
+    }
+
+    // Set timeout (optional)
+    timeout.tv_sec = 5;  // 5 seconds timeout
+    timeout.tv_usec = 0;
+
+    // todo -> utils.h function
+    int ready = select(max_fd + 1, &read_fds, NULL, NULL, &timeout);
+    if (ready == -1) {
+        perror("select");
+        return -1;
+    } else if (ready == 0) {
+        fprintf(stderr, "select timed out\n");
+        return -1;
+    }
+
+    for (int i = 0; i < slave_count; i++) {
+        if (FD_ISSET(slaves[i]->slave2_master_fd[0], &read_fds)) {
+            char buffer[1024];
+            // Read from the file descriptor and process the data
+            ssize_t bytes_read = read_pipe(slaves[i]->slave2_master_fd[0], "output_from_slaves", buffer, sizeof(buffer));
+
+            // print the output from the slave temp
+            if (bytes_read > 0) {
+                buffer[bytes_read] = '\0';
+                printf("%s", buffer);
+            }
+        }
+    }
+
+    return 0;
+}
+
 
 /*
  * Create a slave process
@@ -119,26 +172,46 @@ int assign_file(slave_t *slave, char *const file_path) {
 pid_t create_slave(slave_t *slave) {
     pid_t pid = fork();
     check_fork(pid, "creation of slave");
-
+    
     // fork succeeded, child process
     if (pid == 0) {
+        // Child process
+
+        // MASTER (write) -> SLAVE (read)
+        // We close the master2_slave_fd[0] because we are only writing to the slave
+        close_pipe(slave->master2_slave_fd[1], "master to slave pipe");
+        // Redirect the master2_slave_fd (read) to STDIN_FILENO
+        dup2_pipe(slave->master2_slave_fd[0], STDIN_FILENO, "master to slave pipe");
+        // We close the master2_slave_fd[0] because we are only writing to the slave
+        close_pipe(slave->master2_slave_fd[0], "master to slave pipe");
+
+    
+        // SLAVE (write) -> MASTER (read)
+        // We close slave2_master_fd[1] because we are only reading from the slave
+        close_pipe(slave->slave2_master_fd[0], "slave process");
+
+        // Redirect the slave2_master_fd (write) to STDOUT_FILENO
+        dup2_pipe(slave->slave2_master_fd[1], STDOUT_FILENO, "slave process");  
+
+        // We close the slave2_master_fd[1] because we are only reading from the slave
+        close_pipe(slave->slave2_master_fd[1], "slave process");
         
-        close_pipe(slave->pipefd[1], "slave process");
-
-        // Redirect stdin to the read end of the pipe
-        dup2_pipe(slave->pipefd[0], STDIN_FILENO, "slave process");
-
-        close_pipe(slave->pipefd[0], "slave process");
-
+       
         check_program_path(SLAVE_PATH);
-        execve(SLAVE_PATH, NULL, NULL);
+        char* const argv[] = {SLAVE_PATH, NULL};
+        char* const envp[] = {NULL};
+        execve(SLAVE_PATH, argv, envp);
         perror("execve");
         exit(EXIT_FAILURE);
     } else {
         // parent process
-        // Save the pid and close the write end of the pipe because we are only reading
+        // Save the pid of the slave
         slave->pid = pid;
-        close_pipe(slave->pipefd[0], "slave process");
+
+        // Now we close the file descriptors that are not going to be used by the parent
+        // fd 1 is the write end of the pipe
+        close_pipe(slave->slave2_master_fd[1], "slave process");
+        close_pipe(slave->master2_slave_fd[0], "slave process");
     }
 
     return pid;
