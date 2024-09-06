@@ -5,7 +5,7 @@
 ** It creates the slave processes and sends the files to be analyzed
 ** by the slaves.
 **
-** Author: Fernando Li                      <fli@itba.edu.ar>
+** Author: Fernando Li                      <feli@itba.edu.ar>
 ** Author: Felipe Venturino                 <fventurino@itba.edu.ar>
 ** Author: Uriel Sosa Vazquez               <usosavazquez@itba.edu.ar>
 **
@@ -118,6 +118,7 @@ int assign_file(slave_t *slave, char *const file_path) {
  */
 pid_t create_slave(slave_t *slave) {
     pid_t pid = fork();
+    char * path[] = {SLAVE_PATH,NULL};
     check_fork(pid, "creation of slave");
 
     // fork succeeded, child process
@@ -131,7 +132,7 @@ pid_t create_slave(slave_t *slave) {
         close_pipe(slave->pipefd[0], "slave process");
 
         check_program_path(SLAVE_PATH);
-        execve(SLAVE_PATH, NULL, NULL);
+        execve(SLAVE_PATH, path, NULL);
         perror("execve");
         exit(EXIT_FAILURE);
     } else {

@@ -4,7 +4,7 @@
 
 // 2. Iniciar procesos esclavos
 
-// 3. Distribuir archivos entre distintos esclavlos
+// 3. Distribuir archivos entre distintos esclavos
 
 // 4. Si un slave se libera se le asigna otro archivo a procesar
 

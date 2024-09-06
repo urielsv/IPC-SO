@@ -2,6 +2,7 @@
 #define __SLAVE_MANAGER_H__
 
 #include <stdlib.h>
+#include <stdint.h>
 
 typedef struct slave_t {
     pid_t pid;

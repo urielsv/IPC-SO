@@ -3,7 +3,7 @@
 **
 ** Utility functions for the IPC and process management.
 **
-** Author: Fernando Li                      <fli@itba.edu.ar>
+** Author: Fernando Li                      <feli@itba.edu.ar>
 ** Author: Felipe Venturino                 <fventurino@itba.edu.ar>
 ** Author: Uriel Sosa Vazquez               <usosavazquez@itba.edu.ar>
 **
@@ -15,7 +15,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/_types/_pid_t.h>
+//#include <sys/_types/_pid_t.h>
 #include <unistd.h>
 
 
