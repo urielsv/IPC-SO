@@ -21,22 +21,23 @@
 #include "include/slave_manager.h"
 
 #define REQUIRED_ARGS           2
-#define MIN_PERCENT_FILES       20
+#define MIN_FILES               20
 #define DEFAULT_SLAVE_COUNT     3
+
 uint32_t initial_files_per_slave(uint32_t files, uint32_t slave_count) {
-    if(files < MIN_PERCENT_FILES) {
-        return 1;
+    if(files < MIN_FILES) {
+        return 2;
     }
 
-    uint32_t initial_files = (uint32_t) files * 10 / 100;
+    uint32_t initial_files = (uint32_t) files * 0.1f;
     return (uint32_t) initial_files / slave_count;
 }
 
 uint32_t slave_count(uint32_t files) {
-    if (files < MIN_PERCENT_FILES) {
+    if (files < MIN_FILES) {
         return files > DEFAULT_SLAVE_COUNT ? DEFAULT_SLAVE_COUNT : files;
     } 
-    return (uint32_t) files * 5 / 100;
+    return (uint32_t) files * 0.05f;
 }
 
 
@@ -59,14 +60,13 @@ int main(int argc, char *const argv[]) {
 
     // Initialize slaves
     int files = argc - 1;
-    // int assigned_slaves = slave_count(files);
-    int assigned_slaves = 1;
+    int assigned_slaves = slave_count(files);
     slave_t *slaves[assigned_slaves];
     int init_files_per_slave = initial_files_per_slave(files, assigned_slaves);
 
     int files_assigned = 0;
     // print all the args
-    files_assigned = init_slaves(argv, 4, slaves, 1);
+    files_assigned = init_slaves(argv, init_files_per_slave, slaves, assigned_slaves);
     if (files_assigned == -1) {
         fprintf(stderr, "Error: Could not initialize slaves\n");
         return 1;

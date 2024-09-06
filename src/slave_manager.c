@@ -63,6 +63,7 @@ int init_slaves(char *const argv[], uint32_t files_per_slave, slave_t **slaves, 
     }
 
 
+    int initial_idx = 1;
     for (int i = 0; i < slave_count; i++) {
         // Allocate memory for the slave 
         malloc_slave(&slaves[i]);
@@ -71,20 +72,15 @@ int init_slaves(char *const argv[], uint32_t files_per_slave, slave_t **slaves, 
         create_pipe(slaves[i]->master2_slave_fd, "master2 slave pipe initialization");
         create_pipe(slaves[i]->slave2_master_fd, "slave2 master pipe initialization");
 
-        // Create the slave
-        create_slave(slaves[i]);
+        char *files[files_per_slave];
+        for (int j = 0; j < files_per_slave && argv[initial_idx] != NULL; j++) {
+            files[j] = argv[initial_idx++];
+            fprintf(stderr, "File %s\n", files[j]);
+        }
+        create_slave(slaves[i], files, files_per_slave);
     }
     
-        int argc = 1;
-        for (int j = 0; j < files_per_slave && argv[argc] != NULL; j++) {
-            // start incrementing to avoid argv[0].
-            if (assign_file(slaves[0], argv[argc++]) == -1) {
-                fprintf(stderr, "Error: Could not assign file to slave\n");
-                exit(EXIT_FAILURE);
-            }
-        }
-
-    return argc-1;
+    return files_per_slave * slave_count;
 }
 
 /**
@@ -175,7 +171,7 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count) {
  * Create a slave process
  * @param files_path: The path to the files to process
  */
-pid_t create_slave(slave_t *slave) {
+pid_t create_slave(slave_t *slave, char *const files_path[], uint32_t files_count) {
     pid_t pid = fork();
     check_fork(pid, "creation of slave");
 
@@ -200,6 +196,14 @@ pid_t create_slave(slave_t *slave) {
         // Save the pid of the slave
         slave->pid = pid;
         
+        // Assign initial files 
+        for (int i = 0; i < files_count; i++) {
+            if (assign_file(slave, files_path[i]) == -1) {
+                fprintf(stderr, "Error: Could not assign file to slave\n");
+                exit(EXIT_FAILURE);
+             }
+         }
+    
 
         // Now we close the file descriptors that are not going to be used by the parent
         // fd 1 is the write end of the pipe
