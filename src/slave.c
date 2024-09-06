@@ -13,17 +13,32 @@
 
 int main(int argc, char *const argv[]) {
 
-    // char md5[ENC_SIZE];
-    // Read the file path from the pipe
+    // Disable buffering because we are writing to a pipe
+    if (setvbuf(stdout, NULL, _IONBF, 0) != 0) {
+        perror("setvbuf");
+        exit(EXIT_FAILURE);
+    }
+
+    // Here we disable the buffering for the stdin because we are reading from a pipe
+    if (setvbuf(stdin, NULL, _IONBF, 0) != 0) {
+        perror("setvbuf");
+        exit(EXIT_FAILURE);
+    }
 
     char file_path[BUFF_SIZE];
-    read(STDIN_FILENO, file_path, BUFF_SIZE);
-    fprintf(stderr, "Slave read: %s\n", file_path);
-    get_md5(file_path);
+    char md5[ENC_SIZE+1] = {0};
+    fprintf(stderr, "Creating slave\n");
+    while (fgets(file_path, BUFF_SIZE, stdin) != NULL) {
+        // Remove the newline character, TODO fix warning
+        file_path[strcspn(file_path, "\n")] = '\0';
+        get_md5(file_path, md5);
+        write_pipe(STDOUT_FILENO, "slave write", md5, ENC_SIZE+1);
+    }
+
     return 0;
 }
 
-void get_md5(char *const file_path) {
+void get_md5(char *const file_path, char *md5) {
     char cmd[BUFF_SIZE];
     snprintf(cmd, sizeof(cmd), "%s %s", MD5SUM_PATH, file_path);
 
@@ -34,16 +49,13 @@ void get_md5(char *const file_path) {
     }
 
     // md5 hash has a length of 32 + null terminated
-    char result[ENC_SIZE+1];
-    if (fgets(result, sizeof(result), fp) == NULL) {
+    if (fgets(md5, ENC_SIZE+1, fp) == NULL) {
         pclose(fp);
         perror("fgets");
         exit(EXIT_FAILURE);
     }
 
-    //el maldito null terminated chaval
-    result[ENC_SIZE] = '\0';
-    write(STDOUT_FILENO, result, ENC_SIZE);
+    md5[ENC_SIZE] = '\0';
     if (pclose(fp) == -1) {
         perror("pclose");
         exit(EXIT_FAILURE);

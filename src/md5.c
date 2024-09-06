@@ -59,18 +59,18 @@ int main(int argc, char *const argv[]) {
 
     // Initialize slaves
     int files = argc - 1;
-    int assigned_slaves = slave_count(files);
+    // int assigned_slaves = slave_count(files);
+    int assigned_slaves = 1;
     slave_t *slaves[assigned_slaves];
     int init_files_per_slave = initial_files_per_slave(files, assigned_slaves);
 
     int files_assigned = 0;
-    files_assigned = init_slaves(argv, init_files_per_slave, slaves, assigned_slaves);
+    // print all the args
+    files_assigned = init_slaves(argv, 4, slaves, 1);
     if (files_assigned == -1) {
         fprintf(stderr, "Error: Could not initialize slaves\n");
         return 1;
     }
-
-
 
     while (1) {
         output_from_slaves(slaves, assigned_slaves);

@@ -1,0 +1,46 @@
+pipe2([3, 4], 0)                        = 0
+pipe2([5, 6], 0)                        = 0
+close(6)                                = 0
+close(3)                                = 0
+---
+Creamos 2 pipes;
+abrimos una con el fd 4 abierto y 3 cerrado (o sea para escribir)
+abrimos una con el fd 5 y cerramos el fd 6 (lo opuesto)
+---
+newfstatat(1, "", {st_mode=S_IFREG|0644, st_size=1571, ...}, AT_EMPTY_PATH) = 0
+write(4, "test/a\0", 7)                 = 7
+----
+pipe2(Slave read: test/a
+[3, 6], 0)                        = 0
+
+manda el output de fd6 a stderr (fd3)
+---
+pipe2([7, 8], 0)                        = 0
+close(8)                                = 0
+close(3)                                = 0
+-- escribimos para pasrle de parametor a fd6 el path fd6 es write to slave lo cual esta bien
+write(6, "test/b\0", 7)                 = 7
+
+MD5: d41d8cd98f00b204e9800998ecf8427e  test/a
+
+pipe2(Slave read: test/b
+[3, 8], 0)                        = 0
+--- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_KILLED, si_pid=359, si_uid=0, si_status=SIGSEGV, si_utime=0, si_stime=0} ---
+pipe2([9, 10], 0)                       = 0
+close(10)                               = 0
+close(3)                                = 0
+write(8, "test/c\0", 7)                 = 7
+Slave read: test/c
+pselect6(10, [5 7 9], NULL, NULL, {tv_sec=5, tv_nsec=0}, NULLMD5: d41d8cd98f00b204e9800998ecf8427e  test/b
+
+) = 1 (in [5], left {tv_sec=4, tv_nsec=999996709})
+read(5, "", 1024)                       = 0
+--- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_KILLED, si_pid=362, si_uid=0, si_status=SIGSEGV, si_utime=0, si_stime=0} ---
+MD5: d41d8cd98f00b204e9800998ecf8427e  test/c
+
+--- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_KILLED, si_pid=364, si_uid=0, si_status=SIGSEGV, si_utime=0, si_stime=0} ---
+write(1, "(master) Assigning file test/a t"..., 417(master) Assigning file test/a to slave 359, using fds: 4          (write to slave, master2_slave), and 5 (write to master, slave2_master)
+(master) Assigning file test/b to slave 362, using fds: 6          (write to slave, master2_slave), and 7 (write to master, slave2_master)
+(master) Assigning file test/c to slave 364, using fds: 8          (write to slave, master2_slave), and 9 (write to master, slave2_master)
+) = 417
++++ exited with 0 +++

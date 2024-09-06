@@ -56,19 +56,16 @@ void free_slave(slave_t *slave) {
  */
 int init_slaves(char *const argv[], uint32_t files_per_slave, slave_t **slaves, uint16_t slave_count) {
         
-
+    
     if (argv == NULL || slaves == NULL) {
         fprintf(stderr, "Error: Invalid arguments to init_slaves.\n");
         return -1;
     }
 
-    // Allocate the slaves memory
-    for (int i = 0; i < slave_count; i++) {
-        malloc_slave(&slaves[i]);
-    }
 
-    int argc = 0;
     for (int i = 0; i < slave_count; i++) {
+        // Allocate memory for the slave 
+        malloc_slave(&slaves[i]);
 
         // Create the pipes
         create_pipe(slaves[i]->master2_slave_fd, "master2 slave pipe initialization");
@@ -76,15 +73,17 @@ int init_slaves(char *const argv[], uint32_t files_per_slave, slave_t **slaves, 
 
         // Create the slave
         create_slave(slaves[i]);
-
-        for (int j = 0; j < files_per_slave && argv[argc+1] != NULL; j++) {
+    }
+    
+        int argc = 1;
+        for (int j = 0; j < files_per_slave && argv[argc] != NULL; j++) {
             // start incrementing to avoid argv[0].
-            if (assign_file(slaves[i], argv[++argc]) == -1) {
+            if (assign_file(slaves[0], argv[argc++]) == -1) {
                 fprintf(stderr, "Error: Could not assign file to slave\n");
                 exit(EXIT_FAILURE);
             }
         }
-    }
+
     return argc-1;
 }
 
@@ -101,15 +100,23 @@ int assign_file(slave_t *slave, char *const file_path) {
         return -1;
     }
 
-    slave->file_path = file_path;
+    // slave->file_path = file_path;
 
     // TEMP: Debug
-    printf("(master) Assigning file %s to slave %d, using fds: %d \
-         (write to slave, master2_slave), and %d (write to master, slave2_master)\n",
+    printf("(master) Assigning file %s to slave %d, using fds: %d (write to slave, master2_slave), and %d (write to master, slave2_master)\n",
         file_path, slave->pid, slave->master2_slave_fd[1], slave->slave2_master_fd[0]);
-
-    size_t len = strlen(file_path) + 1; 
-    write_pipe(slave->master2_slave_fd[1], "assign_file", file_path, len);
+ 
+    // Create a new string with a newline at the end of the file path
+    size_t len = strlen(file_path);
+    char *new_file_path = (char *) malloc(len + 1);
+    if (new_file_path == NULL) {
+        fprintf(stderr, "Error: Could not allocate memory for new file path\n");
+        perror("malloc");
+        return -1;
+    }
+    strncpy(new_file_path, file_path, len);
+    new_file_path[len] = '\n';
+    write_pipe(slave->master2_slave_fd[1], "assign_file", new_file_path, len+1);
 
     return 0;
 }
@@ -146,7 +153,9 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count) {
 
     for (int i = 0; i < slave_count; i++) {
         if (FD_ISSET(slaves[i]->slave2_master_fd[0], &read_fds)) {
-            char buffer[1024];
+            // Clean the buffer
+            char buffer[1024] = {0};
+
             // Read from the file descriptor and process the data
             ssize_t bytes_read = read_pipe(slaves[i]->slave2_master_fd[0], "output_from_slaves", buffer, sizeof(buffer));
 
@@ -169,7 +178,7 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count) {
 pid_t create_slave(slave_t *slave) {
     pid_t pid = fork();
     check_fork(pid, "creation of slave");
-    
+
     // fork succeeded, child process
     if (pid == 0) {
         // Child process
@@ -190,6 +199,7 @@ pid_t create_slave(slave_t *slave) {
         // parent process
         // Save the pid of the slave
         slave->pid = pid;
+        
 
         // Now we close the file descriptors that are not going to be used by the parent
         // fd 1 is the write end of the pipe
