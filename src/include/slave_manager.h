@@ -19,6 +19,7 @@ pid_t create_slave(slave_t *slave, char *const files_path[], uint32_t files_coun
 void free_slave(slave_t *slave);
 int output_from_slaves(slave_t **slaves, uint16_t slave_count, int *tasks_processed);
 void debug_slave(slave_t *slave);
+void finish_slaves(slave_t **slaves, uint16_t slave_count);
 
 
 
