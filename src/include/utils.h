@@ -10,8 +10,8 @@
 ** Last modified: 03-09-2024 (dd-mm-yyyy)
 */
 
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef __UTILS_H__
+#define __UTILS_H__
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,4 +29,4 @@ void check_program_path(char *path);
 void close_end_and_dup2(int to_redirect, int new_fd, int to_close, char *const pipe_error);
 void setvbuf_pipe(FILE *stream, char *const pipe_error);
 
-#endif // UTILS_H
+#endif // __UTILS_H__

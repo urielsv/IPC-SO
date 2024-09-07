@@ -114,56 +114,6 @@ int assign_file(slave_t *slave, char *const file_path) {
 }
 
 
-//select
-int output_from_slaves(slave_t **slaves, uint16_t slave_count, int *tasks_processed) {
-    fd_set read_fds;
-
-    FD_ZERO(&read_fds);
-    int max_fd = -1;
-    for (int i = 0; i < slave_count; i++) {
-        if (slaves[i]->slave2_master_fd[0] < 0) {
-            fprintf(stderr, "Invalid file descriptor for slave %d\n", i);
-            return -1;
-        }
-        FD_SET(slaves[i]->slave2_master_fd[0], &read_fds);
-        if (slaves[i]->slave2_master_fd[0] > max_fd) {
-            // max_fd is the highest file descriptor in the set this means that 
-            // select will check all the file descriptors from 0 to max_fd
-            max_fd = slaves[i]->slave2_master_fd[0];
-        }
-    }
-
-    // todo -> utils.h function
-    int ready = select(max_fd + 1, &read_fds, NULL, NULL, NULL);
-    if (ready == -1) {
-        perror("select");
-        return -1;
-    } else if (ready == 0) {
-        fprintf(stderr, "select timed out\n");
-        return -1;
-    }
-
-    for (int i = 0; i < slave_count; i++) {
-        if (FD_ISSET(slaves[i]->slave2_master_fd[0], &read_fds)) {
-            // Clean the buffer
-            char buffer[1024] = {0};
-
-            // Read from the file descriptor and process the data
-            ssize_t bytes_read = read_pipe(slaves[i]->slave2_master_fd[0], "output_from_slaves", buffer, sizeof(buffer));
-
-            // print the output from the slave temp
-            if (bytes_read > 0) {
-                slaves[i]->is_available = 1;
-                *tasks_processed += 1;
-                buffer[bytes_read] = '\0';
-                printf("Printing from master: %s (%s)\n", buffer, slaves[i]->file_path);
-            }
-        }
-    }
-
-    return 0;
-}
-
 void debug_slave(slave_t *slave) {
     printf("--- Slave Debug ---\n");
     printf("Slave %d\n", slave->pid);
@@ -193,7 +143,6 @@ void finish_slaves(slave_t **slaves, uint16_t slave_count) {
  */
 pid_t create_slave(slave_t *slave, char *const files_path[], uint32_t files_count) {
     pid_t pid = fork();
-    char * path[] = {SLAVE_PATH,NULL};
     check_fork(pid, "creation of slave");
 
     // fork succeeded, child process

@@ -7,4 +7,4 @@
 
 
 void get_md5(char *const file_path, char *md5);
-#endif
+#endif // __SLAVE_H__
