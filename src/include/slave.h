@@ -6,5 +6,5 @@
 #include <sys/wait.h>
 
 
-char *get_md5(char *const file_path);
+void get_md5(char *const file_path, char *md5);
 #endif

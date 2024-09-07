@@ -19,24 +19,26 @@
 #include <sys/types.h>
 
 #include "include/slave_manager.h"
+#include "include/utils.h"
 
 #define REQUIRED_ARGS           2
-#define MIN_PERCENT_FILES       20
+#define MIN_FILES               20
 #define DEFAULT_SLAVE_COUNT     3
+
 uint32_t initial_files_per_slave(uint32_t files, uint32_t slave_count) {
-    if(files < MIN_PERCENT_FILES) {
+    if(files < MIN_FILES) {
         return 1;
     }
 
-    uint32_t initial_files = (uint32_t) files * 10 / 100;
+    uint32_t initial_files = (uint32_t) files * 0.1f;
     return (uint32_t) initial_files / slave_count;
 }
 
 uint32_t slave_count(uint32_t files) {
-    if (files < MIN_PERCENT_FILES) {
+    if (files < MIN_FILES) {
         return files > DEFAULT_SLAVE_COUNT ? DEFAULT_SLAVE_COUNT : files;
     } 
-    return (uint32_t) files * 5 / 100;
+    return (uint32_t) files * 0.05f;
 }
 
 
@@ -70,15 +72,19 @@ int main(int argc, char *const argv[]) {
         return 1;
     }
 
-    /*
-    Select and logic to keep processing files until finished
-    while (1) { assign files to available slave }
-    */
+    // Now we start processing the remaining files 
+    int tasks_processed = 0;
+    while (tasks_processed < files) {
 
-    // free slaves
-    for (int i = 0; i < assigned_slaves; i++) {
-        free_slave(slaves[i]);
+        // Check if any slave is available
+        for (int i = 0; i < assigned_slaves; i++) {
+            if (slaves[i]->is_available && files_assigned < files) {
+                assign_file(slaves[i], argv[++files_assigned]);
+            }
+        }
+        output_from_slaves(slaves, assigned_slaves, &tasks_processed);
     }
 
+    finish_slaves(slaves, assigned_slaves);
     return 0;
 }

@@ -5,61 +5,55 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "include/slave.h"
+#include "include/utils.h"
 
+#define ENC_SIZE        32
+#define BUFF_SIZE       256
+#define MD5SUM_PATH     "/usr/bin/md5sum"
 
-#define ENC_SIZE 33
-#define BUFF_SIZE 256
 int main(int argc, char *const argv[]) {
 
-    // char md5[ENC_SIZE];
-    // Read the file path from the pipe
+    // Disable buffering because we are writing to a pipe
+    setvbuf_pipe(stdin, "stdin");
+    // Disable the buffering for the stdin because we are reading from a pipe
+    setvbuf_pipe(stdout, "stdout");
 
+
+    // We are reading from a pipe the file paths
     char file_path[BUFF_SIZE];
-    read(STDIN_FILENO, file_path, BUFF_SIZE);
-    get_md5(file_path);
+    char md5[ENC_SIZE+1] = {0};
+    while (fgets(file_path, BUFF_SIZE, stdin) != NULL) {
+        // Remove the newline character, TODO fix warning
+        file_path[strcspn(file_path, "\n")] = '\0';
+        get_md5(file_path, md5);
+        write_pipe(STDOUT_FILENO, "slave write", md5, ENC_SIZE+1);
+    }
+
     return 0;
 }
 
-char *get_md5(char *const file_path) {
-    int pipe_fd[2];
-    if (pipe(pipe_fd) == -1) {
-        perror("pipe");
+void get_md5(char *const file_path, char *md5) {
+    char cmd[BUFF_SIZE];
+    snprintf(cmd, sizeof(cmd), "%s %s", MD5SUM_PATH, file_path);
+
+    FILE *fp = popen(cmd, "r");
+    if (fp == NULL) {
+        perror("popen");
         exit(EXIT_FAILURE);
     }
 
-    pid_t pid = fork();
-    if (pid == -1) {
-        perror("fork");
+    // md5 hash has a length of 32 + null terminated
+    if (fgets(md5, ENC_SIZE+1, fp) == NULL) {
+        pclose(fp);
+        perror("fgets");
         exit(EXIT_FAILURE);
     }
 
-    if (pid == 0) {
-        // Child process
-        close(pipe_fd[0]);
-        dup2(pipe_fd[1], STDOUT_FILENO);
-        // Close the original write end of the pipe
-        close(pipe_fd[1]);
-        char *const args[] = { "md5sum", file_path, NULL };
-        execve("/sbin/md5sum", args, NULL);
-        perror("execve");
-        exit(EXIT_FAILURE);
-    } else {
-        // Parent process
-        // Close the write end of the pipe
-        close(pipe_fd[1]);
+    // Add null terminator
+    md5[ENC_SIZE] = '\0';
 
-        char buffer[BUFF_SIZE];
-        ssize_t nbytes;
-        // TEMP: Testing the read end of the pipe
-        while ((nbytes = read(pipe_fd[0], buffer, sizeof(buffer) - 1)) > 0) {
-            buffer[nbytes] = '\0';
-            printf("%s", buffer);
-        }
-        close(pipe_fd[0]);
-        // Wait for the child process to finish
-        wait(NULL);
+    if (pclose(fp) == -1) {
+        perror("pclose");
+        exit(EXIT_FAILURE);
     }
-    // TEMP print the slave with pid and the file path analyzed
-    printf("(slave pid: %d) reading %s\n", pid, file_path);
-    return NULL;
 }
