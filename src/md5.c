@@ -19,6 +19,7 @@
 #include <sys/types.h>
 
 #include "include/slave_manager.h"
+#include "include/utils.h"
 
 #define REQUIRED_ARGS           2
 #define MIN_FILES               20
@@ -26,7 +27,7 @@
 
 uint32_t initial_files_per_slave(uint32_t files, uint32_t slave_count) {
     if(files < MIN_FILES) {
-        return 2;
+        return 1;
     }
 
     uint32_t initial_files = (uint32_t) files * 0.1f;
@@ -65,27 +66,25 @@ int main(int argc, char *const argv[]) {
     int init_files_per_slave = initial_files_per_slave(files, assigned_slaves);
 
     int files_assigned = 0;
-    // print all the args
     files_assigned = init_slaves(argv, init_files_per_slave, slaves, assigned_slaves);
     if (files_assigned == -1) {
         fprintf(stderr, "Error: Could not initialize slaves\n");
         return 1;
     }
 
-    while (1) {
-        output_from_slaves(slaves, assigned_slaves);
+    // Now we start processing the remaining files 
+    int tasks_processed = 0;
+    while (tasks_processed < files) {
+
+        // Check if any slave is available
+        for (int i = 0; i < assigned_slaves; i++) {
+            if (slaves[i]->is_available && files_assigned < files) {
+                assign_file(slaves[i], argv[++files_assigned]);
+            }
+        }
+        output_from_slaves(slaves, assigned_slaves, &tasks_processed);
     }
 
-    /*
-    Select and logic to keep processing files until finished
-    while (1) { assign files to available slave }
-    */
-
-
-    // free slaves
-    for (int i = 0; i < assigned_slaves; i++) {
-        free_slave(slaves[i]);
-    }
-
+    finish_slaves(slaves, assigned_slaves);
     return 0;
 }

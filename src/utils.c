@@ -2,8 +2,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include "include/utils.h"
 
+
+void inline setvbuf_pipe(FILE *stream, char *const pipe_error) {
+    if (setvbuf(stream, NULL, _IONBF, 0) != 0) {
+        fprintf(stderr, "Error: Could not setvbuf during %s\n", pipe_error);
+        perror("setvbuf");
+        exit(EXIT_FAILURE);
+    }
+}
 
 void inline create_pipe(int fd[2], char *const pipe_error) {
     if (pipe(fd) == -1) {

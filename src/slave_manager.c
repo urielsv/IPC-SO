@@ -75,7 +75,6 @@ int init_slaves(char *const argv[], uint32_t files_per_slave, slave_t **slaves, 
         char *files[files_per_slave];
         for (int j = 0; j < files_per_slave && argv[initial_idx] != NULL; j++) {
             files[j] = argv[initial_idx++];
-            fprintf(stderr, "File %s\n", files[j]);
         }
         create_slave(slaves[i], files, files_per_slave);
     }
@@ -96,11 +95,8 @@ int assign_file(slave_t *slave, char *const file_path) {
         return -1;
     }
 
-    // slave->file_path = file_path;
-
-    // TEMP: Debug
-    printf("(master) Assigning file %s to slave %d, using fds: %d (write to slave, master2_slave), and %d (write to master, slave2_master)\n",
-        file_path, slave->pid, slave->master2_slave_fd[1], slave->slave2_master_fd[0]);
+    slave->is_available = 0;
+    slave->file_path = file_path;
  
     // Create a new string with a newline at the end of the file path
     size_t len = strlen(file_path);
@@ -119,7 +115,7 @@ int assign_file(slave_t *slave, char *const file_path) {
 
 
 //select
-int output_from_slaves(slave_t **slaves, uint16_t slave_count) {
+int output_from_slaves(slave_t **slaves, uint16_t slave_count, int *tasks_processed) {
     fd_set read_fds;
 
     FD_ZERO(&read_fds);
@@ -157,6 +153,8 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count) {
 
             // print the output from the slave temp
             if (bytes_read > 0) {
+                slaves[i]->is_available = 1;
+                *tasks_processed += 1;
                 buffer[bytes_read] = '\0';
                 printf("Printing from master: %s (%s)\n", buffer, slaves[i]->file_path);
             }
@@ -166,6 +164,26 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count) {
     return 0;
 }
 
+void debug_slave(slave_t *slave) {
+    printf("--- Slave Debug ---\n");
+    printf("Slave %d\n", slave->pid);
+    printf("File path: %s\n", slave->file_path);
+    printf("Slave2Master: %d %d\n", slave->slave2_master_fd[0], slave->slave2_master_fd[1]);
+    printf("Master2Slave: %d %d\n", slave->master2_slave_fd[0], slave->master2_slave_fd[1]);
+    printf("Is available: %d\n", slave->is_available);
+    printf("-------------------\n");
+}
+
+void finish_slaves(slave_t **slaves, uint16_t slave_count) {
+    for (int i = 0; i < slave_count; i++) {
+        // close pipes, so we can finish the program
+        close_pipe(slaves[i]->master2_slave_fd[1], "master to slave pipe");
+        close_pipe(slaves[i]->slave2_master_fd[0], "slave to master pipe");
+
+        // free slaves memory
+        free_slave(slaves[i]);
+    }
+}
 
 /*
  * Create a slave process

@@ -14,20 +14,14 @@
 int main(int argc, char *const argv[]) {
 
     // Disable buffering because we are writing to a pipe
-    if (setvbuf(stdout, NULL, _IONBF, 0) != 0) {
-        perror("setvbuf");
-        exit(EXIT_FAILURE);
-    }
+    setvbuf_pipe(stdin, "stdin");
+    // Disable the buffering for the stdin because we are reading from a pipe
+    setvbuf_pipe(stdout, "stdout");
 
-    // Here we disable the buffering for the stdin because we are reading from a pipe
-    if (setvbuf(stdin, NULL, _IONBF, 0) != 0) {
-        perror("setvbuf");
-        exit(EXIT_FAILURE);
-    }
 
+    // We are reading from a pipe the file paths
     char file_path[BUFF_SIZE];
     char md5[ENC_SIZE+1] = {0};
-    fprintf(stderr, "Creating slave\n");
     while (fgets(file_path, BUFF_SIZE, stdin) != NULL) {
         // Remove the newline character, TODO fix warning
         file_path[strcspn(file_path, "\n")] = '\0';
@@ -55,7 +49,9 @@ void get_md5(char *const file_path, char *md5) {
         exit(EXIT_FAILURE);
     }
 
+    // Add null terminator
     md5[ENC_SIZE] = '\0';
+
     if (pclose(fp) == -1) {
         perror("pclose");
         exit(EXIT_FAILURE);
