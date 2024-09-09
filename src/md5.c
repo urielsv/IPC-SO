@@ -19,6 +19,7 @@
 #define DEFAULT_SLAVE_COUNT     3
 #define MD5_HASH                32
 #define INITIAL_SEM_MUTEX       1
+
 uint32_t initial_files_per_slave(uint32_t files, uint32_t slave_count) {
     if(files < MIN_FILES) {
         return 1;
@@ -31,7 +32,7 @@ uint32_t initial_files_per_slave(uint32_t files, uint32_t slave_count) {
 uint32_t slave_count(uint32_t files) {
     if (files < MIN_FILES) {
         return files > DEFAULT_SLAVE_COUNT ? DEFAULT_SLAVE_COUNT : files;
-    } 
+    }
     return (uint32_t) files * 0.05f;
 }
 
@@ -40,7 +41,7 @@ uint32_t slave_count(uint32_t files) {
 int main(int argc, char *const argv[]) {
     // Validate arguments
     if (argc < REQUIRED_ARGS) {
-        printf("Usage: %s <file1> <file2> <...> <fileN>", argv[0]);
+        printf("Usage: %s <file1> <file2> <...> <fileN>\n", argv[0]);
         return 1;
     }
 
@@ -57,9 +58,13 @@ int main(int argc, char *const argv[]) {
     sleep(2);
     int files = argc - 1;
     // Shared memory buffer (we will store the md5 hashes here)
-    shared_memory_t *shared_memory = create_shared_memory("/md5_sem", INITIAL_SEM_MUTEX);
+    shared_memory_t *shared_memory = create_shared_memory();
+    create_semaphore(shared_memory, INITIAL_SEM_MUTEX);
 
-    
+
+
+
+
 
     // Initialize slaves
     int assigned_slaves = slave_count(files);
@@ -73,16 +78,7 @@ int main(int argc, char *const argv[]) {
         return 1;
     }
 
-    // /*TODO Test */
-    // int fd = open("resultado.txt",O_RDWR);
-    // if (fd==-1){
-    //     perror("ERROR: error when opening file resultado.txt");
-    //     exit(EXIT_FAILURE);
-    // }
-    // dup2(fd,0);
-
-
-    // Now we start processing the remaining files 
+    // Now we start processing the remaining files
     while (shared_memory->files_processed < files) {
 
         // Check if any slave is available
@@ -93,14 +89,26 @@ int main(int argc, char *const argv[]) {
         }
         output_from_slaves(slaves, assigned_slaves, shared_memory);
     }
+    char md5[MD5_HASH] = {0};
+    char file_path[1024] = {0};
+    int slave_id = 0;
 
+
+    read_shared_memory(shared_memory, file_path, md5, &slave_id);
+    printf("MD5 hash: %s\n", md5);
+    printf("File path: %s\n", file_path);
+    printf("Slave id: %d\n", slave_id);
+    // TEMP
     // Print the shared memory buffer
-    for (int i = 0; i < shared_memory->files_processed; i++) {
-        printf("MD5 hash: %s\n", shared_memory->buffer[i].file_info->md5);
-        printf("File path: %s\n", shared_memory->buffer[i].file_info->file_path);
-        printf("Slave id: %d\n", shared_memory->buffer[i].file_info->slave_id);
-    }
-    
+    // for (int i = 0; i < shared_memory->files_processed; i++) {
+    //     printf("MD5 hash: %s\n", shared_memory->buffer[i].file_info->md5);
+    //     printf("File path: %s\n", shared_memory->buffer[i].file_info->file_path);
+    // }
+
+    // Clean up
+    destroy_semaphore(shared_memory);
+    destroy_shared_memory(shared_memory);
+
     finish_slaves(slaves, assigned_slaves);
     return 0;
 }
@@ -117,7 +125,7 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_t *
         }
         FD_SET(slaves[i]->slave2_master_fd[0], &read_fds);
         if (slaves[i]->slave2_master_fd[0] > max_fd) {
-            // max_fd is the highest file descriptor in the set this means that 
+            // max_fd is the highest file descriptor in the set this means that
             // select will check all the file descriptors from 0 to max_fd
             max_fd = slaves[i]->slave2_master_fd[0];
         }
@@ -146,19 +154,14 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_t *
                 slaves[i]->is_available = 1;
                 shared_memory->files_processed++;
 
-                // Now we store the md5 hash in the shared memory
-
-                // temp, change to parameters instead 
-                struct file_info_t fi;
-                // fi.slave_id = slaves[i]->pid;
-                // strncpy(fi.slave_id, "333", 30);
-                // strncpy(fi.md5, buffer, MD5_HASH);
-                // strncpy(fi.file_path, slaves[i]->file_path, strlen(slaves[i]->file_path));
-
-
-                write_shared_memory(shared_memory, fi);
-
+                // Add a null terminator to the buffer so we can avoid printing garbage
                 buffer[bytes_read] = '\0';
+                // printf("File path: %s", slaves[i]->file_path);
+                // printf("MD5: %s", buffer);
+                // printf("Slave id: %d", slaves[i]->pid);
+
+                write_shared_memory(shared_memory, slaves[i]->file_path, buffer, slaves[i]->pid);
+
                 printf("Printing from master: %s (%s)\n", buffer, slaves[i]->file_path);
             }
         }
