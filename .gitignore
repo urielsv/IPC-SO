@@ -4,3 +4,4 @@ src/*.o
 src/*.bin
 .vscode/
 .idea
+.bash_history

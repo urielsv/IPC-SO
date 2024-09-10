@@ -18,7 +18,6 @@
 #include <unistd.h>
 #include <string.h>
 
-
 void create_pipe(int fd[2], char *const pipe_error);
 ssize_t write_pipe(int fd, char *const pipe_error, char *const buffer, size_t len);
 ssize_t read_pipe(int fd, char *const pipe_error, char *const buffer, size_t len);

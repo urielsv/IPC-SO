@@ -1,0 +1,1 @@
+#define MD5_HASH_SIZE 32

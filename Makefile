@@ -19,12 +19,14 @@ slave: src/slave.o src/utils.o
 view: src/view.o src/utils.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-
-# $< is the first dependency of the rule
-%.o: src/%.c
+# Compile source files into object files
+src/%.o: src/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# Clean up build files
 clean:
-	rm -f $(EXECS) src/*.o
+	rm -f $(OBJS) $(EXECS)
 
-PHONY: all clean
+
+# Phony targets
+.PHONY: all clean

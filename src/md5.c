@@ -11,31 +11,14 @@
 
 #include "include/slave_manager.h"
 #include "include/utils.h"
-#include "include/shm_utils.h"
 #include "include/md5.h"
+#include "include/shm_manager.h"
 
 #define REQUIRED_ARGS           2
 #define MIN_FILES               20
 #define DEFAULT_SLAVE_COUNT     3
 #define MD5_HASH                32
 #define INITIAL_SEM_MUTEX       1
-
-uint32_t initial_files_per_slave(uint32_t files, uint32_t slave_count) {
-    if(files < MIN_FILES) {
-        return 1;
-    }
-
-    uint32_t initial_files = (uint32_t) files * 0.1f;
-    return (uint32_t) initial_files / slave_count;
-}
-
-uint32_t slave_count(uint32_t files) {
-    if (files < MIN_FILES) {
-        return files > DEFAULT_SLAVE_COUNT ? DEFAULT_SLAVE_COUNT : files;
-    }
-    return (uint32_t) files * 0.05f;
-}
-
 
 
 int main(int argc, char *const argv[]) {
@@ -57,14 +40,13 @@ int main(int argc, char *const argv[]) {
     // Give time for the user to init the view before starting the slaves
     sleep(2);
     int files = argc - 1;
-    // Shared memory buffer (we will store the md5 hashes here)
-    shared_memory_t *shared_memory = create_shared_memory();
-    create_semaphore(shared_memory, INITIAL_SEM_MUTEX);
 
+    // Create shared memory
+    // transform getpid to string
+    char pid[10] = {0};
+    snprintf(pid, sizeof(pid), "%d", getpid());
 
-
-
-
+    shared_memory_adt shared_memory = create_shared_memory(pid, files, INITIAL_SEM_MUTEX);
 
     // Initialize slaves
     int assigned_slaves = slave_count(files);
@@ -79,7 +61,7 @@ int main(int argc, char *const argv[]) {
     }
 
     // Now we start processing the remaining files
-    while (shared_memory->files_processed < files) {
+    while (get_processed_files(shared_memory) < files) {
 
         // Check if any slave is available
         for (int i = 0; i < assigned_slaves; i++) {
@@ -100,10 +82,12 @@ int main(int argc, char *const argv[]) {
     printf("Slave id: %d\n", slave_id);
     // TEMP
     // Print the shared memory buffer
-    // for (int i = 0; i < shared_memory->files_processed; i++) {
-    //     printf("MD5 hash: %s\n", shared_memory->buffer[i].file_info->md5);
-    //     printf("File path: %s\n", shared_memory->buffer[i].file_info->file_path);
-    // }
+    for (int i = 0; i < files; i++) {
+        read_shared_memory(shared_memory, file_path, md5, &slave_id);
+        printf("MD5 hash: %s\n", md5);
+        printf("File path: %s\n", file_path);
+        printf("Slave id: %d\n", slave_id);
+    }
 
     // Clean up
     destroy_semaphore(shared_memory);
@@ -113,7 +97,7 @@ int main(int argc, char *const argv[]) {
     return 0;
 }
 
-int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_t *shared_memory) {
+int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt shared_memory) {
     fd_set read_fds;
 
     FD_ZERO(&read_fds);
@@ -152,13 +136,9 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_t *
             // print the output from the slave temp
             if (bytes_read > 0) {
                 slaves[i]->is_available = 1;
-                shared_memory->files_processed++;
 
                 // Add a null terminator to the buffer so we can avoid printing garbage
                 buffer[bytes_read] = '\0';
-                // printf("File path: %s", slaves[i]->file_path);
-                // printf("MD5: %s", buffer);
-                // printf("Slave id: %d", slaves[i]->pid);
 
                 write_shared_memory(shared_memory, slaves[i]->file_path, buffer, slaves[i]->pid);
 
@@ -168,4 +148,20 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_t *
     }
 
     return 0;
+}
+
+uint32_t initial_files_per_slave(uint32_t files, uint32_t slave_count) {
+    if(files < MIN_FILES) {
+        return 1;
+    }
+
+    uint32_t initial_files = (uint32_t) files * 0.1f;
+    return (uint32_t) initial_files / slave_count;
+}
+
+uint32_t slave_count(uint32_t files) {
+    if (files < MIN_FILES) {
+        return files > DEFAULT_SLAVE_COUNT ? DEFAULT_SLAVE_COUNT : files;
+    }
+    return (uint32_t) files * 0.05f;
 }
