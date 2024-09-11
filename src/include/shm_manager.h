@@ -4,12 +4,14 @@
 #include <stddef.h>
 #include <semaphore.h>
 #include <string.h>
-
-
-// change, make it modular
-#define SHM_PATH                "/md5_shm_"
-#define SEM_BUFF_PATH           "/md5_buff_sem_"
-#define SEM_MUTEX_PATH          "/md5_mutex_"
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <dirent.h>
 
 typedef struct shared_memory_cdt * shared_memory_adt;
 
@@ -20,6 +22,6 @@ void open_semaphores(shared_memory_adt shared_memory);
 void close_semaphores(shared_memory_adt shared_memory);
 void destroy_resources(shared_memory_adt shared_memory);
 void unlink_all_semaphores(shared_memory_adt shared_memory);
-size_t get_processed_files(shared_memory_adt shared_memory) {
+size_t get_processed_files(shared_memory_adt shared_memory);
 
 #endif // __SHM_MANAGER_H__

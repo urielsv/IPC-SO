@@ -1,15 +1,9 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
+
+
 #include "include/slave.h"
 #include "include/utils.h"
+#include "include/defs.h"
 
-#define ENC_SIZE        32
-#define BUFF_SIZE       256
-#define MD5SUM_PATH     "/usr/bin/md5sum"
 
 int main(int argc, char *const argv[]) {
 

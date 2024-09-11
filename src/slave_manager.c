@@ -11,18 +11,15 @@
 **
 ** Last modified: 03-09-2024 (dd-mm-yyyy)
 */
-
 #include <stdio.h>
-#include <unistd.h>
-#include <sys/wait.h>
 #include <stdlib.h>
-#include <sys/stat.h>
-#include <dirent.h>
-#include <string.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 #include "include/slave_manager.h"
 #include "include/utils.h"
+#include "include/defs.h"
 
-#define SLAVE_PATH              "./slave"
 
 /*
  * Calculate the number of files per slave
@@ -109,7 +106,7 @@ int assign_file(slave_t *slave, char *const file_path) {
     strncpy(new_file_path, file_path, len);
     new_file_path[len] = '\n';
     write_pipe(slave->master2_slave_fd[1], "assign_file", new_file_path, len+1);
-
+    free(new_file_path);
     return 0;
 }
 

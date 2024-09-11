@@ -1,25 +1,5 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <sys/stat.h>
-#include <dirent.h>
-#include <stdint.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <string.h>
 
-#include "include/slave_manager.h"
-#include "include/utils.h"
 #include "include/md5.h"
-#include "include/shm_manager.h"
-
-#define REQUIRED_ARGS           2
-#define MIN_FILES               20
-#define DEFAULT_SLAVE_COUNT     3
-#define MD5_HASH                32
-#define INITIAL_SEM_MUTEX       1
-
 
 int main(int argc, char *const argv[]) {
     // Validate arguments
@@ -39,6 +19,7 @@ int main(int argc, char *const argv[]) {
 
     // Give time for the user to init the view before starting the slaves
     sleep(2);
+
     int files = argc - 1;
 
     // Create shared memory
@@ -46,7 +27,7 @@ int main(int argc, char *const argv[]) {
     char pid[10] = {0};
     snprintf(pid, sizeof(pid), "%d", getpid());
 
-    shared_memory_adt shared_memory = create_shared_memory(pid, files, INITIAL_SEM_MUTEX);
+    shared_memory_adt shared_memory = create_shared_memory(pid, SHM_BUFFER_SIZE, INITIAL_SEM_MUTEX);
 
     // Initialize slaves
     int assigned_slaves = slave_count(files);
@@ -61,16 +42,16 @@ int main(int argc, char *const argv[]) {
     }
 
     // Now we start processing the remaining files
-    while (get_processed_files(shared_memory) < files) {
+//  while (get_processed_files(shared_memory) < files) {
 
-        // Check if any slave is available
-        for (int i = 0; i < assigned_slaves; i++) {
-            if (slaves[i]->is_available && files_assigned < files) {
-                assign_file(slaves[i], argv[++files_assigned]);
-            }
-        }
-        output_from_slaves(slaves, assigned_slaves, shared_memory);
-    }
+//      // Check if any slave is available
+//      for (int i = 0; i < assigned_slaves; i++) {
+//          if (slaves[i]->is_available && files_assigned < files) {
+//              assign_file(slaves[i], argv[++files_assigned]);
+//          }
+//      }
+//      output_from_slaves(slaves, assigned_slaves, shared_memory);
+//  }
     char md5[MD5_HASH] = {0};
     char file_path[1024] = {0};
     int slave_id = 0;
@@ -90,10 +71,9 @@ int main(int argc, char *const argv[]) {
     }
 
     // Clean up
-    destroy_semaphore(shared_memory);
-    destroy_shared_memory(shared_memory);
-
+    destroy_resources(shared_memory);
     finish_slaves(slaves, assigned_slaves);
+
     return 0;
 }
 
