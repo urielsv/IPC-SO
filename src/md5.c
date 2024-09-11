@@ -42,35 +42,19 @@ int main(int argc, char *const argv[]) {
     }
 
     // Now we start processing the remaining files
-//  while (get_processed_files(shared_memory) < files) {
+    while (get_processed_files(shared_memory) < files) {
 
-//      // Check if any slave is available
-//      for (int i = 0; i < assigned_slaves; i++) {
-//          if (slaves[i]->is_available && files_assigned < files) {
-//              assign_file(slaves[i], argv[++files_assigned]);
-//          }
-//      }
-//      output_from_slaves(slaves, assigned_slaves, shared_memory);
-//  }
-    char md5[MD5_HASH] = {0};
-    char file_path[1024] = {0};
-    int slave_id = 0;
-
-
-    read_shared_memory(shared_memory, file_path, md5, &slave_id);
-    printf("MD5 hash: %s\n", md5);
-    printf("File path: %s\n", file_path);
-    printf("Slave id: %d\n", slave_id);
-    // TEMP
-    // Print the shared memory buffer
-    for (int i = 0; i < files; i++) {
-        read_shared_memory(shared_memory, file_path, md5, &slave_id);
-        printf("MD5 hash: %s\n", md5);
-        printf("File path: %s\n", file_path);
-        printf("Slave id: %d\n", slave_id);
+        // Check if any slave is available
+        for (int i = 0; i < assigned_slaves; i++) {
+            if (slaves[i]->is_available && files_assigned < files) {
+                assign_file(slaves[i], argv[++files_assigned]);
+            }
+        }
+        output_from_slaves(slaves, assigned_slaves, shared_memory);
     }
 
-    // Clean up
+
+    // Clean up resources
     destroy_resources(shared_memory);
     finish_slaves(slaves, assigned_slaves);
 

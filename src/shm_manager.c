@@ -137,6 +137,7 @@ void close_semaphores(shared_memory_adt shared_memory) {
 }
 
 
+// TODO: Fix slave id and delimiters
 void write_shared_memory(shared_memory_adt shared_memory, char *const file_path, char *const md5, int slave_id) {
     semaphore_down(shared_memory->mutex_sem->semaphore);
 
