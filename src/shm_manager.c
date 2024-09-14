@@ -78,7 +78,7 @@ shared_memory_adt create_shared_memory(char *const uid, size_t buf_size, size_t 
         exit(EXIT_FAILURE);
     }
 
-    create_path_string(&shared_memory->shm->shm_path, uid, SHM_PATH);
+    create_path_string(&shared_memory->shm->shm_path, uid, SHM_PREFIX);
     printf("Shared memory path: %s\n", shared_memory->shm->shm_path);
     // create_path_string(shared_memory->shm->shm_path, uid, SHM_PATH);
     // printf("Shared memory path: %s\n", shared_memory->shm->shm_path);
@@ -105,8 +105,8 @@ shared_memory_adt create_shared_memory(char *const uid, size_t buf_size, size_t 
     }
 
     // Semaphores
-    shared_memory->full_buff_sem = create_semaphore(SEM_BUFF_PATH, uid, sem_value);
-    shared_memory->mutex_sem = create_semaphore(SEM_MUTEX_PATH, uid, sem_value);
+    shared_memory->full_buff_sem = create_semaphore(SEM_BUFF_PREFIX, uid, sem_value);
+    shared_memory->mutex_sem = create_semaphore(SEM_MUTEX_PREFIX, uid, sem_value);
     
     // Other
     shared_memory->files_processed = 0;
@@ -259,4 +259,16 @@ void unlink_all_semaphores(shared_memory_adt shared_memory) {
 
 size_t get_processed_files(shared_memory_adt shared_memory) {
     return shared_memory->files_processed;
+}
+
+char *get_shm_path(shared_memory_adt shared_memory) {
+    return shared_memory->shm->shm_path;
+}
+
+char *get_buff_sem_path(shared_memory_adt shared_memory) {
+    return shared_memory->full_buff_sem->sem_path;
+}
+
+char *get_mutex_sem_path(shared_memory_adt shared_memory) {
+    return shared_memory->mutex_sem->sem_path;
 }

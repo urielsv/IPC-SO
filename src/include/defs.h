@@ -10,8 +10,9 @@
 
 #define ENC_SIZE                32
 #define BUFF_SIZE               256
+#define FORMAT_SIZE             10
 #define MD5SUM_PATH             "/usr/bin/md5sum"
 
-#define SHM_PATH                "/md5_shm_"
-#define SEM_BUFF_PATH           "/md5_buff_sem_"
-#define SEM_MUTEX_PATH          "/md5_mutex_"
+#define SHM_PREFIX              "/md5_shm_"
+#define SEM_BUFF_PREFIX         "/md5_buff_sem_"
+#define SEM_MUTEX_PREFIX        "/md5_mutex_"

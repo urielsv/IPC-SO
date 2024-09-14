@@ -24,4 +24,8 @@ void destroy_resources(shared_memory_adt shared_memory);
 void unlink_all_semaphores(shared_memory_adt shared_memory);
 size_t get_processed_files(shared_memory_adt shared_memory);
 
+char *get_shm_path(shared_memory_adt shared_memory);
+char *get_buff_sem_path(shared_memory_adt shared_memory);
+char *get_mutex_sem_path(shared_memory_adt shared_memory);
+
 #endif // __SHM_MANAGER_H__

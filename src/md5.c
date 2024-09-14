@@ -16,6 +16,15 @@ int main(int argc, char *const argv[]) {
             return 1;
         }
     }
+    char pid[10] = {0};
+    snprintf(pid, sizeof(pid), "%d", getpid());
+
+    shared_memory_adt shared_memory = create_shared_memory(pid, SHM_BUFFER_SIZE, INITIAL_SEM_MUTEX);
+
+    // We pass the shm, and sem to the view process
+    puts(get_shm_path(shared_memory));
+    puts(get_buff_sem_path(shared_memory));
+    puts(get_mutex_sem_path(shared_memory));
 
     // Give time for the user to init the view before starting the slaves
     sleep(2);
@@ -24,10 +33,6 @@ int main(int argc, char *const argv[]) {
 
     // Create shared memory
     // transform getpid to string
-    char pid[10] = {0};
-    snprintf(pid, sizeof(pid), "%d", getpid());
-
-    shared_memory_adt shared_memory = create_shared_memory(pid, SHM_BUFFER_SIZE, INITIAL_SEM_MUTEX);
 
     // Initialize slaves
     int assigned_slaves = slave_count(files);
