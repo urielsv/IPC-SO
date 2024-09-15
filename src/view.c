@@ -47,13 +47,13 @@ void load_parameters(int argc, char *argv[], char **shm_path, char **buff_sem_pa
     *buff_sem_path = read_line_from_stdin();
     *mutex_sem_path = read_line_from_stdin();
     
-    if (validate_arguments(*shm_path, *buff_sem_path, *mutex_sem_path) == -1) {
-        fprintf(stderr, "Error: Invalid arguments\n");
-        free(*shm_path);
-        free(*buff_sem_path);
-        free(*mutex_sem_path);
-        exit(EXIT_FAILURE);
-    }
+    // if (validate_arguments(*shm_path, *buff_sem_path, *mutex_sem_path) == -1) {
+    //     fprintf(stderr, "Error: Invalid arguments\n");
+    //     free(*shm_path);
+    //     free(*buff_sem_path);
+    //     free(*mutex_sem_path);
+    //     exit(EXIT_FAILURE);
+    // }
 
 }
 
@@ -68,9 +68,9 @@ int main(int argc, char *argv[]) {
     char *mutex_sem_path = NULL;
     load_parameters(argc, argv, &shm_path, &buff_sem_path, &mutex_sem_path);
 
-    fprintf(stderr,"%s\n",shm_path);
-    fprintf(stderr,"%s\n",buff_sem_path); 
-    fprintf(stderr,"%s\n",mutex_sem_path);
+    // fprintf(stderr,"%s\n",shm_path);
+    // fprintf(stderr,"%s\n",buff_sem_path); 
+    // fprintf(stderr,"%s\n",mutex_sem_path);
 
 
     shared_memory_adt shared_memory = attach_shared_memory(shm_path, buff_sem_path, mutex_sem_path, SHM_BUFFER_SIZE);
@@ -80,9 +80,12 @@ int main(int argc, char *argv[]) {
     char md5[ENC_SIZE + 1];
     int slave_id;
     int i = 0;
-    while (i < 6) {
+    char *buff;
+    // sleep(10);
+    while (i <9) {
         read_shared_memory(shared_memory, file_path, md5, &slave_id);
-        printf("File: %s, MD5: %s, Slave ID: %d\n", file_path, md5, slave_id);
+        //printf("buff: %s\n", buff);
+        // printf("File: %s, MD5: %s, Slave ID: %d\n", file_path, md5, slave_id);
         i++;
     } 
     

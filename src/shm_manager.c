@@ -31,10 +31,10 @@ struct shared_memory_cdt {
 
 
 
-static shared_memory_adt mmap_memory(int fd, size_t buffer_size, int flags) {
-    return (shared_memory_adt) mmap(
+static char *mmap_buffer(int fd, size_t buffer_size, int flags) {
+    return (char *) mmap(
         NULL,
-        sizeof(struct shared_memory_cdt) + buffer_size,
+        buffer_size,
         flags, 
         MAP_SHARED,
         fd,
@@ -73,19 +73,35 @@ static semaphore_t *create_semaphore(const char *prefix, const char *uid, int in
     return semaphore;
 }
 shared_memory_adt attach_shared_memory(char *shm_path, char *full_buff_sem_path, char *mutex_sem_path, size_t buffer_size) {
+    printf("SHJM!! %s\n", shm_path);
+    printf("SHJM!! %s\n", full_buff_sem_path);
+    printf("SHJM!! %s\n", mutex_sem_path);
     int fd = shm_open_util(shm_path, O_RDWR, "attaching shared memory");
     if (fd < 0) {
         perror("shm_open_util");
         exit(EXIT_FAILURE);
     }
+    fprintf(stderr, "FD: %d", fd);
 
-    shared_memory_adt shared_memory = mmap_memory(fd, buffer_size, PROT_READ | PROT_WRITE);
-    if (shared_memory == MAP_FAILED) {
+
+    shared_memory_adt shared_memory = calloc(1, sizeof(struct shared_memory_cdt));
+    shared_memory->buffer = calloc(1, sizeof(buffer_t));
+    shared_memory->buffer->base_addr = mmap_buffer(fd, buffer_size, PROT_READ | PROT_WRITE);
+    // shared_memory->buffer->base_addr = shared_memory->buffer;
+    fprintf(stderr,"Base addr was read from: %p", shared_memory->buffer);
+    if (shared_memory->buffer == MAP_FAILED) {
         perror("mmap");
         close(fd);
         exit(EXIT_FAILURE);
     }
 
+    shared_memory->shm->fd;
+    shared_memory->full_buff_sem = calloc(1, sizeof(semaphore_t));
+    shared_memory->mutex_sem = calloc(1, sizeof(semaphore_t));
+    shared_memory->full_buff_sem->sem_path = full_buff_sem_path;
+    shared_memory->mutex_sem->sem_path = mutex_sem_path;
+
+    open_semaphores(shared_memory);
     // shared_memory->shm = calloc(1, sizeof(shm_t));
     // if (shared_memory->shm == NULL) {
     //     perror("calloc");
@@ -108,11 +124,9 @@ shared_memory_adt attach_shared_memory(char *shm_path, char *full_buff_sem_path,
     // shared_memory->buffer = (buffer_t *)((char *)shared_memory + sizeof(struct shared_memory_cdt));
     // shared_memory->buffer->base_addr = (char *)shared_memory->buffer + sizeof(buffer_t);
     // shared_memory->buffer->size = buffer_size;
-    // shared_memory->buffer->read = 0;
+     shared_memory->buffer->read = 0;
     // shared_memory->buffer->written = 0;
 
-    // shared_memory->full_buff_sem = create_semaphore(SEM_BUFF_PREFIX, full_buff_sem_path, 0);
-    // shared_memory->mutex_sem = create_semaphore(SEM_MUTEX_PREFIX, mutex_sem_path, 1);
 
     // shared_memory->files_processed = 0;
 
@@ -129,6 +143,7 @@ shared_memory_adt create_shared_memory(char *uid, size_t buf_size, size_t sem_va
         perror("shm_open_util");
         exit(EXIT_FAILURE);
     }
+    fprintf(stderr, "FD: %d", fd);
 
     if (ftruncate(fd, sizeof(struct shared_memory_cdt) + buf_size) < 0) {
         perror("ftruncate");
@@ -136,8 +151,13 @@ shared_memory_adt create_shared_memory(char *uid, size_t buf_size, size_t sem_va
         exit(EXIT_FAILURE);
     }
 
-    shared_memory_adt shared_memory = mmap_memory(fd, buf_size, PROT_READ | PROT_WRITE);
-    if (shared_memory == MAP_FAILED) {
+    shared_memory_adt shared_memory = calloc(1, sizeof(struct shared_memory_cdt));
+    shared_memory->buffer = calloc(1, sizeof(buffer_t));
+    shared_memory->buffer->base_addr = mmap_buffer(fd, buf_size, PROT_READ | PROT_WRITE);
+    //shared_memory->buffer = malloc(sizeof(buffer_t))
+    // shared_memory->buffer = mmap_buffer(fd, buf_size, PROT_READ | PROT_WRITE);
+    fprintf(stderr, "\nBase addr was created in : %p", shared_memory->buffer);
+    if (shared_memory->buffer == MAP_FAILED) {
         perror("mmap");
         close(fd);
         exit(EXIT_FAILURE);
@@ -146,20 +166,18 @@ shared_memory_adt create_shared_memory(char *uid, size_t buf_size, size_t sem_va
     shared_memory->shm = calloc(1, sizeof(shm_t));
     if (shared_memory->shm == NULL) {
         perror("calloc");
-        munmap(shared_memory, sizeof(struct shared_memory_cdt) + buf_size);
+        // munmap(shared_memory, sizeof(struct shared_memory_cdt) + buf_size);
         close(fd);
         exit(EXIT_FAILURE);
     }
     shared_memory->shm->fd = fd;
     shared_memory->shm->shm_path = shm_path;
-    //fprintf(stderr,"hasta shm_path llegue\n");
-    shared_memory->buffer = malloc (sizeof(buffer_t));
-    shared_memory->buffer->base_addr = malloc(buf_size);
+
     shared_memory->buffer->size = buf_size;
     shared_memory->buffer->read = 0;
     shared_memory->buffer->written = 0;
 
-    shared_memory->full_buff_sem = create_semaphore(SEM_BUFF_PREFIX, uid, sem_value);
+    shared_memory->full_buff_sem = create_semaphore(SEM_BUFF_PREFIX, uid, 0);
     shared_memory->mutex_sem = create_semaphore(SEM_MUTEX_PREFIX, uid, sem_value);
 
     shared_memory->files_processed = 0;
@@ -190,38 +208,70 @@ void close_semaphores(shared_memory_adt shared_memory) {
 void write_shared_memory(shared_memory_adt shared_memory, char * const file_path, char * const md5, int slave_id) {
     semaphore_down(shared_memory->mutex_sem->semaphore);
 
-    size_t written = shared_memory->buffer->written;
-    size_t file_path_size = strlen(file_path);
-    size_t md5_size = strlen(md5);
-    size_t slave_id_size = snprintf(NULL, 0, "%d", slave_id);
-    char slave_id_str[slave_id_size + 1];
-    snprintf(slave_id_str, slave_id_size + 1, "%d", slave_id);
-
-    size_t total_size = md5_size + 1 + file_path_size + 1 + slave_id_size + 1 + 1; // md5\0file_path\0slave_id\0\n
-
-    if (written + total_size > shared_memory->buffer->size) {
-        fprintf(stderr, "Error: Not enough space in buffer to write data\n");
-        semaphore_up(shared_memory->mutex_sem->semaphore);
-        exit(EXIT_FAILURE);
-    }
-
-    char *write_ptr = shared_memory->buffer->base_addr + written;
-    memcpy(write_ptr, md5, md5_size);
-    write_ptr += md5_size;
-    *write_ptr++ = '\0';
-
-    memcpy(write_ptr, file_path, file_path_size);
-    write_ptr += file_path_size;
-    *write_ptr++ = '\0';
-
-    memcpy(write_ptr, slave_id_str, slave_id_size);
-    write_ptr += slave_id_size;
-    *write_ptr++ = '\0';
-
-    *write_ptr++ = '\n';
-
     shared_memory->files_processed++;
-    shared_memory->buffer->written += total_size;
+    char *write_ptr = shared_memory->buffer->base_addr + shared_memory->buffer->written;
+    memcpy(write_ptr, file_path, strlen(file_path) + 1);
+    fprintf(stderr, "\n(md5) %s", write_ptr);
+    write_ptr += strlen(file_path) + 1;
+    shared_memory->buffer->written += strlen(file_path) + 1;
+//     size_t written = shared_memory->buffer->written;
+//     size_t file_path_size = strlen(file_path) + 1;
+//     size_t md5_size = strlen(md5) + 1;
+//     size_t slave_id_size = snprintf(NULL, 0, "%d", slave_id);
+//     char slave_id_str[slave_id_size + 1];
+//     snprintf(slave_id_str, slave_id_size + 1, "%d", slave_id);
+
+//     size_t total_size = md5_size + 1 + file_path_size + 1 + slave_id_size + 1 + 1; // md5\0file_path\0slave_id\0\n
+
+//     if (written + total_size > shared_memory->buffer->size) {
+//         fprintf(stderr, "Error: Not enough space in buffer to write data\n");
+//         semaphore_up(shared_memory->mutex_sem->semaphore);
+//         exit(EXIT_FAILURE);
+//     }
+
+//     char *write_ptr = shared_memory->buffer->base_addr + written;
+//     // fprintf(stderr, "Writing to mem addr: %p", shared_memory->buffer);
+//     fprintf(stderr, "\nbase addr inside buff_t is: %p", write_ptr);
+
+//     char *tmp_buffer = malloc(total_size);
+//     if (*tmp_buffer == NULL) {
+//         fprintf(stderr, "Error: Could not allocate memory for buffer\n");
+//         semaphore_up(shared_memory->mutex_sem->semaphore);
+//         exit(EXIT_FAILURE);
+//     }
+
+//     tmp_buffer = md5;
+//     tmp_buffer += md5_size;
+//     *tmp_buffer++ = '\0';
+//     *tmp_buffer = file_path;
+//     tmp_buffer += file_path_size;
+//     *tmp_buffer++ = '\0';
+//     *tmp_buffer = slave_id_str;
+//     tmp_buffer += slave_id_size;
+//     *tmp_buffer++ = '\0';
+//     fprintf(stderr, "\nWriting to shared memory: %s", tmp_buffer);
+//     memcpy(write_ptr, tmp_buffer, total_size);
+
+//     free(tmp_buffer);
+// /*
+//     memcpy(write_ptr, md5, md5_size);
+//     fprintf(stderr, "\n Writing md5:%s\t", write_ptr);
+//     write_ptr += md5_size;
+//     *write_ptr++ = '\0';
+
+//     memcpy(write_ptr, file_path, file_path_size);
+//     write_ptr += file_path_size;
+//     *write_ptr++ = '\0';
+//     fprintf(stderr, "\nWriting filepath: %s\t", write_ptr);  
+
+//     memcpy(write_ptr, slave_id_str, slave_id_size);
+//     write_ptr += slave_id_size;
+//     *write_ptr++ = '\0';
+    
+//     fprintf(stderr, "\nWriting slaveid: %s\n\n\n\n", write_ptr);
+//     *write_ptr++ = '\n';
+// */
+//     shared_memory->buffer->written += total_size;
 
     semaphore_up(shared_memory->mutex_sem->semaphore);
     semaphore_up(shared_memory->full_buff_sem->semaphore);
@@ -231,24 +281,37 @@ void read_shared_memory(shared_memory_adt shared_memory, char *file_path, char *
     semaphore_down(shared_memory->full_buff_sem->semaphore);
     semaphore_down(shared_memory->mutex_sem->semaphore);
 
-    size_t read = shared_memory->buffer->read;
-    char *buffer = shared_memory->buffer->base_addr + read;
-    char *read_ptr = buffer;
+    char *read_ptr = shared_memory->buffer->base_addr + shared_memory->buffer->read;
 
-    strcpy(file_path, read_ptr);
-    read_ptr += strlen(file_path) + 1;
+    size_t size = strlen(read_ptr) + 1;
+    for (size_t i = 0; i < size; i++) {
+        if (read_ptr[i] == '\0' || read_ptr[i] == '\n') {
+            read_ptr[i] = ','; // Reemplazar el terminador nulo por una coma
+        }
+    }
+    printf("\n(view) %s", read_ptr);
+    shared_memory->files_processed++;
+    // shared_memory->buffer->read += 6;
+    // size_t read = shared_memory->buffer->read;
+    // char *buffer = shared_memory->buffer->base_addr + read;
+    // printf("read_from_shm: %s\n", buffer);
+    // char *read_ptr = buffer;
 
-    strcpy(md5, read_ptr);
-    read_ptr += strlen(md5) + 1;
+    // strcpy(file_path, read_ptr);
+    // read_ptr += strlen(file_path) + 1;
 
-    *slave_id = atoi(read_ptr);
-    read_ptr += strlen(read_ptr) + 1;
+    // strcpy(md5, read_ptr);
+    // read_ptr += strlen(md5) + 1;
 
-    shared_memory->buffer->read += (read_ptr - buffer) + 1;
+    // *slave_id = atoi(read_ptr);
+    // read_ptr += strlen(read_ptr) + 1;
+
+    // shared_memory->buffer->read += (read_ptr - buffer) + 1;
 
     semaphore_up(shared_memory->mutex_sem->semaphore);
-    semaphore_up(shared_memory->full_buff_sem->semaphore);
+    // semaphore_up(shared_memory->full_buff_sem->semaphore);
 }
+
 
 static void destroy_semaphores(shared_memory_adt shared_memory) {
     close_semaphores(shared_memory);
@@ -265,15 +328,6 @@ void destroy_resources(shared_memory_adt shared_memory) {
         return;
     }
 
-   
-    if (shared_memory->buffer != NULL) {
-        // if (shared_memory->buffer->base_addr != NULL) {
-        //     munmap(shared_memory->buffer->base_addr, shared_memory->buffer->size);
-        // }
-        free(shared_memory->buffer->base_addr);
-        free(shared_memory->buffer);
-    }
-
     if (shared_memory->shm != NULL) {
         close(shared_memory->shm->fd);
         shm_unlink(shared_memory->shm->shm_path);
@@ -284,9 +338,16 @@ void destroy_resources(shared_memory_adt shared_memory) {
     if (shared_memory->full_buff_sem != NULL && shared_memory->mutex_sem != NULL) {
         destroy_semaphores(shared_memory);
     }
-     munmap(shared_memory, 4096);
+    if (shared_memory->buffer != NULL) {
+        // if (shared_memory->buffer->base_addr != NULL) {
+             munmap(shared_memory->buffer->base_addr, shared_memory->buffer->size);
+        // }
+        // free(shared_memory->buffer->base_addr);
+        // free(shared_memory->buffer);
+    }
+    // munmap(shared_memory, 4096);
 
-    //free(shared_memory);
+    free(shared_memory);
 }
 
 void unlink_all_semaphores(shared_memory_adt shared_memory) {

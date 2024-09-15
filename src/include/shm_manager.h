@@ -22,6 +22,7 @@ shared_memory_adt create_shared_memory(char *const uid, size_t buf_size, size_t 
 shared_memory_adt attach_shared_memory(char *shm_path, char *full_buff_sem_path, char *mutex_sem_path, size_t buffer_size);
 
 // Function to read data from shared memory
+// void read_shared_memory(shared_memory_adt shared_memory, char *file_path, char *md5, int *slave_id);
 void read_shared_memory(shared_memory_adt shared_memory, char *file_path, char *md5, int *slave_id);
 
 // Function to write data to shared memory

@@ -40,7 +40,8 @@ int main(int argc, char *const argv[]) {
     int assigned_slaves = slave_count(files);
     slave_t *slaves[assigned_slaves];
     int init_files_per_slave = initial_files_per_slave(files, assigned_slaves);
-/*
+
+
     int files_assigned = 0;
     files_assigned = init_slaves(argv, init_files_per_slave, slaves, assigned_slaves);
     if (files_assigned == -1) {
@@ -60,10 +61,9 @@ int main(int argc, char *const argv[]) {
         output_from_slaves(slaves, assigned_slaves, shared_memory);
     }
 
-*/
     // Clean up resources
     destroy_resources(shared_memory);
-   // finish_slaves(slaves, assigned_slaves);
+    finish_slaves(slaves, assigned_slaves);
     
 
     return 0;

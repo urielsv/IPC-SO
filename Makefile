@@ -1,4 +1,5 @@
-CFLAGS=-Wall -Wextra -Iinclude -pedantic
+CFLAGS=-Wall 
+# -Wextra -Iinclude -pedantic
 CFLAGS+=-g
 LDFLAGS=-fsanitize=address -lpthread
 CC=gcc
