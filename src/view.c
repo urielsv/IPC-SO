@@ -78,12 +78,12 @@ int main(int argc, char *argv[]) {
 
     char file_path[BUFF_SIZE];
     char md5[ENC_SIZE + 1];
-    int slave_id;
+    char slave_id[4];
     int i = 0;
     char *buff;
     // sleep(10);
     while (i <9) {
-        read_shared_memory(shared_memory, file_path, md5, &slave_id);
+        read_shared_memory(shared_memory, file_path, md5, slave_id);
         //printf("buff: %s\n", buff);
         // printf("File: %s, MD5: %s, Slave ID: %d\n", file_path, md5, slave_id);
         i++;

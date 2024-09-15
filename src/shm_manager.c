@@ -125,7 +125,7 @@ shared_memory_adt attach_shared_memory(char *shm_path, char *full_buff_sem_path,
     // shared_memory->buffer->base_addr = (char *)shared_memory->buffer + sizeof(buffer_t);
     // shared_memory->buffer->size = buffer_size;
      shared_memory->buffer->read = 0;
-    // shared_memory->buffer->written = 0;
+     shared_memory->buffer->written = 0;
 
 
     // shared_memory->files_processed = 0;
@@ -225,18 +225,20 @@ void write_shared_memory(shared_memory_adt shared_memory, char * const file_path
     memcpy(write_ptr, file_path, curr_size);
     fprintf(stderr, "\n(write, file_path) %s", write_ptr);
     total_size += curr_size;
-    *write_ptr += curr_size;
+    write_ptr += curr_size;
 
     curr_size = strlen(md5) + 1;
     memcpy(write_ptr, md5, curr_size);
     fprintf(stderr, "\n(write, md5) %s", write_ptr);
     write_ptr += curr_size;
+    total_size += curr_size;
     
     curr_size = strlen(slave_id_str) + 1;
     memcpy(write_ptr, slave_id_str, curr_size);
     fprintf(stderr, "\n(write, slave_id) %s", write_ptr);
     write_ptr += curr_size;
-    
+    total_size += curr_size;
+
     shared_memory->buffer->written += total_size;
 
     
@@ -245,46 +247,75 @@ void write_shared_memory(shared_memory_adt shared_memory, char * const file_path
     semaphore_up(shared_memory->full_buff_sem->semaphore);
 }
 
-void read_shared_memory(shared_memory_adt shared_memory, char *file_path, char *md5, int *slave_id) {
+
+void strcopy(char *dest, const char *src) {
+    while (*src != '\0') { // Mientras no se llegue al final de la cadena
+        *dest = *src; // Copiar carácter de src a dest
+        fprintf(stderr, "Copying character: '%c'\n", *src); // Imprimir carácter copiado
+        dest++; // Mover puntero a la siguiente posición en dest
+        src++; // Mover puntero a la siguiente posición en src
+    }
+    *dest = '\0'; // Agregar el carácter nulo al final de la cadena copiada
+    fprintf(stderr, "Copying character: '%c'\n", *src); // Imprimir el carácter nulo
+}
+
+
+void read_shared_memory(shared_memory_adt shared_memory, char *file_path, char *md5, char *slave_id) {
+    
     semaphore_down(shared_memory->full_buff_sem->semaphore);
     semaphore_down(shared_memory->mutex_sem->semaphore);
+    fprintf(stderr, "\n\nReading from shared memory\n");
 
     char *read_ptr = shared_memory->buffer->base_addr + shared_memory->buffer->read;
-    
     size_t total_size = 0;
-    
-    //replace \n with ',' in base_addr
-    size_t size = strlen(read_ptr) + 1;
-    for (size_t i = 0; i < size; i++) {
-        if (read_ptr[i] == '\n') {
-            read_ptr[i] = ',';
+    fprintf(stderr, "\n(view, read, expeted incremention by 45 each time) %d", shared_memory->buffer->read);
+
+
+      for (size_t i = 0; i < 45;) {
+        // Imprimir caracteres hasta el siguiente carácter nulo
+        fprintf(stderr, "\nData: ");
+        while(i < 1000) {
+            fprintf(stderr, "%c", shared_memory->buffer->base_addr[i]);
+            if(shared_memory->buffer->base_addr[i] == '\0') {
+                fprintf(stderr, ",");
+            }
+            i++;
         }
-    }
+       }
 
-    printf("\n(view POSTa) %s", read_ptr);
+    fprintf(stderr, "\n");fprintf(stderr, "\n");
+
+    size_t curr_size = 0;
+
+    strcpy(file_path, read_ptr);
+    fprintf(stderr,"\n(view, fp) %s", file_path);
+    curr_size = strlen(file_path) + 1;
+    total_size += curr_size;
+    read_ptr += curr_size;
 
 
+    //fprintf(stderr,"\n(view, read_ptr expected md5) %s", read_ptr);
+    strcpy(md5, read_ptr);
+    fprintf(stderr,"\n(view, md5) %s", md5);
+    curr_size = strlen(md5) + 1;
+    total_size += curr_size;
+    read_ptr += curr_size;
 
-    file_path = read_ptr;
-    total_size += strlen(file_path) + 1;
-    read_ptr += total_size;
-    printf("\n(view, fp) %s", file_path);
 
-    md5 = read_ptr;
-    total_size += strlen(md5) + 1;
-    read_ptr += total_size;
-    printf("\n(view, md5) %s", md5);
-    
-    *slave_id = atoi(read_ptr);
+    strcpy(slave_id, read_ptr);
+    fprintf(stderr,"\n(view, slaveid) %s", slave_id);
     total_size += strlen(read_ptr) + 1;
 
-    printf("\n(view, slaveid) %d", *slave_id);
 
 
+    shared_memory->buffer->read += total_size;
+    fprintf(stderr,"\n(view, total size expected 40 aprox) %d", total_size);
 
-    shared_memory->buffer->read += total_size ;
     // printf("\n(view) %s", read_ptr);
     shared_memory->files_processed++;
+
+    semaphore_up(shared_memory->mutex_sem->semaphore);
+    //semaphore_up(shared_memory->full_buff_sem->semaphore);
     // shared_memory->buffer->read += 6;
     // size_t read = shared_memory->buffer->read;
     // char *buffer = shared_memory->buffer->base_addr + read;
@@ -302,7 +333,6 @@ void read_shared_memory(shared_memory_adt shared_memory, char *file_path, char *
 
     // shared_memory->buffer->read += (read_ptr - buffer) + 1;
 
-    semaphore_up(shared_memory->mutex_sem->semaphore);
     // semaphore_up(shared_memory->full_buff_sem->semaphore);
 }
 
