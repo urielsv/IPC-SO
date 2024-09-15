@@ -5,6 +5,8 @@
 #define DEFAULT_SLAVE_COUNT     3
 #define MD5_HASH                32
 #define INITIAL_SEM_MUTEX       1
+#define VIEW_SLEEP_TIME         2
+#define BUF_FILE_PATH_SIZE      128
 
 #define SLAVE_PATH              "./slave"
 

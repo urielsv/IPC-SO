@@ -22,12 +22,13 @@ int main(int argc, char *const argv[]) {
     shared_memory_adt shared_memory = create_shared_memory(pid, SHM_BUFFER_SIZE, INITIAL_SEM_MUTEX);
 
     // We pass the shm, and sem to the view process
-    puts(get_shm_path(shared_memory));
-    puts(get_buff_sem_path(shared_memory));
-    puts(get_mutex_sem_path(shared_memory));
+    printf("%s\n", get_shm_path(shared_memory));
+    printf("%s\n", get_buff_sem_path(shared_memory));
+    printf("%s\n", get_mutex_sem_path(shared_memory));
+    fflush(stdout);
 
     // Give time for the user to init the view before starting the slaves
-    sleep(2);
+    // sleep(VIEW_SLEEP_TIME);
 
     int files = argc - 1;
 
@@ -111,7 +112,11 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt
 
                 write_shared_memory(shared_memory, slaves[i]->file_path, buffer, slaves[i]->pid);
 
-                printf("Printing from master: %s (%s)\n", buffer, slaves[i]->file_path);
+// char file_path[BUFF_SIZE];
+//     char md5[ENC_SIZE + 1];
+//     int slave_id;
+//         read_shared_memory(shared_memory, file_path, md5, &slave_id);
+//                 fprintf(stderr, "Printing from master: %s %s (%d)\n", file_path,md5, slave_id);
             }
         }
     }

@@ -4,7 +4,7 @@
 int  shm_open_util(char *const shm_path, int flags, char *const shm_error) {
     // We create a shared memory object to store the data,
     // using the flags O_CREAT and O_RDWR to create it if it does not exist
-    int shm_fd = shm_open(shm_path, flags, 0666);
+    int shm_fd = shm_open(shm_path, flags, 0777);
     
     if (shm_fd == -1) {
         fprintf(stderr, "Error: Could not open shared memory during %s\n", shm_error);
@@ -25,13 +25,13 @@ void  ftruncate_util(int shm_fd, size_t size, char *const shm_error) {
 }
 
 // Create the semaphore
-void  open_semaphore(char *const sem_path, sem_t **semaphore) {
-    *semaphore = sem_open(sem_path, O_RDWR);
-    if (*semaphore == SEM_FAILED) {
-        fprintf(stderr, "Error: Could not open semaphore during open_semaphore\n");
+sem_t* sem_open_util(const char *name, int oflag) {
+    sem_t *sem = sem_open(name, oflag);
+    if (sem == SEM_FAILED) {
         perror("sem_open");
         exit(EXIT_FAILURE);
     }
+    return sem;
 }
 
 void close_semaphore(sem_t *semaphore, char *const sem_path) {

@@ -1,4 +1,4 @@
-CFLAGS=-Wall -Iinclude -pedantic
+CFLAGS=-Wall -Wextra -Iinclude -pedantic
 CFLAGS+=-g
 LDFLAGS=-fsanitize=address -lpthread
 CC=gcc
@@ -14,10 +14,10 @@ all: $(EXECS)
 md5: src/md5.o src/slave_manager.o src/utils.o src/shm_utils.o src/shm_manager.o 
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-slave: src/slave.o src/utils.o
+slave: src/slave.o src/utils.o 
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-view: src/view.o src/utils.o
+view: src/view.o src/utils.o src/shm_manager.o src/shm_utils.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 # Compile source files into object files
