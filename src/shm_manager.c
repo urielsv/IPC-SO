@@ -208,70 +208,38 @@ void close_semaphores(shared_memory_adt shared_memory) {
 void write_shared_memory(shared_memory_adt shared_memory, char * const file_path, char * const md5, int slave_id) {
     semaphore_down(shared_memory->mutex_sem->semaphore);
 
-    shared_memory->files_processed++;
-    char *write_ptr = shared_memory->buffer->base_addr + shared_memory->buffer->written;
-    memcpy(write_ptr, file_path, strlen(file_path) + 1);
-    fprintf(stderr, "\n(md5) %s", write_ptr);
-    write_ptr += strlen(file_path) + 1;
-    shared_memory->buffer->written += strlen(file_path) + 1;
-//     size_t written = shared_memory->buffer->written;
-//     size_t file_path_size = strlen(file_path) + 1;
-//     size_t md5_size = strlen(md5) + 1;
-//     size_t slave_id_size = snprintf(NULL, 0, "%d", slave_id);
-//     char slave_id_str[slave_id_size + 1];
-//     snprintf(slave_id_str, slave_id_size + 1, "%d", slave_id);
+    size_t written = shared_memory->buffer->written;
 
-//     size_t total_size = md5_size + 1 + file_path_size + 1 + slave_id_size + 1 + 1; // md5\0file_path\0slave_id\0\n
 
-//     if (written + total_size > shared_memory->buffer->size) {
-//         fprintf(stderr, "Error: Not enough space in buffer to write data\n");
-//         semaphore_up(shared_memory->mutex_sem->semaphore);
-//         exit(EXIT_FAILURE);
-//     }
 
-//     char *write_ptr = shared_memory->buffer->base_addr + written;
-//     // fprintf(stderr, "Writing to mem addr: %p", shared_memory->buffer);
-//     fprintf(stderr, "\nbase addr inside buff_t is: %p", write_ptr);
-
-//     char *tmp_buffer = malloc(total_size);
-//     if (*tmp_buffer == NULL) {
-//         fprintf(stderr, "Error: Could not allocate memory for buffer\n");
-//         semaphore_up(shared_memory->mutex_sem->semaphore);
-//         exit(EXIT_FAILURE);
-//     }
-
-//     tmp_buffer = md5;
-//     tmp_buffer += md5_size;
-//     *tmp_buffer++ = '\0';
-//     *tmp_buffer = file_path;
-//     tmp_buffer += file_path_size;
-//     *tmp_buffer++ = '\0';
-//     *tmp_buffer = slave_id_str;
-//     tmp_buffer += slave_id_size;
-//     *tmp_buffer++ = '\0';
-//     fprintf(stderr, "\nWriting to shared memory: %s", tmp_buffer);
-//     memcpy(write_ptr, tmp_buffer, total_size);
-
-//     free(tmp_buffer);
-// /*
-//     memcpy(write_ptr, md5, md5_size);
-//     fprintf(stderr, "\n Writing md5:%s\t", write_ptr);
-//     write_ptr += md5_size;
-//     *write_ptr++ = '\0';
-
-//     memcpy(write_ptr, file_path, file_path_size);
-//     write_ptr += file_path_size;
-//     *write_ptr++ = '\0';
-//     fprintf(stderr, "\nWriting filepath: %s\t", write_ptr);  
-
-//     memcpy(write_ptr, slave_id_str, slave_id_size);
-//     write_ptr += slave_id_size;
-//     *write_ptr++ = '\0';
+    size_t slave_id_size = snprintf(NULL, 0, "%d", slave_id);
+    char slave_id_str[slave_id_size + 1];
+    snprintf(slave_id_str, slave_id_size + 1, "%d", slave_id);
     
-//     fprintf(stderr, "\nWriting slaveid: %s\n\n\n\n", write_ptr);
-//     *write_ptr++ = '\n';
-// */
-//     shared_memory->buffer->written += total_size;
+    char *write_ptr = shared_memory->buffer->base_addr + written;
+
+    size_t total_size = 0;    
+    size_t curr_size = 0;
+
+    curr_size = strlen(file_path) + 1;
+    memcpy(write_ptr, file_path, curr_size);
+    fprintf(stderr, "\n(write, file_path) %s", write_ptr);
+    total_size += curr_size;
+    *write_ptr += curr_size;
+
+    curr_size = strlen(md5) + 1;
+    memcpy(write_ptr, md5, curr_size);
+    fprintf(stderr, "\n(write, md5) %s", write_ptr);
+    write_ptr += curr_size;
+    
+    curr_size = strlen(slave_id_str) + 1;
+    memcpy(write_ptr, slave_id_str, curr_size);
+    fprintf(stderr, "\n(write, slave_id) %s", write_ptr);
+    write_ptr += curr_size;
+    
+    shared_memory->buffer->written += total_size;
+
+    
 
     semaphore_up(shared_memory->mutex_sem->semaphore);
     semaphore_up(shared_memory->full_buff_sem->semaphore);
@@ -282,14 +250,40 @@ void read_shared_memory(shared_memory_adt shared_memory, char *file_path, char *
     semaphore_down(shared_memory->mutex_sem->semaphore);
 
     char *read_ptr = shared_memory->buffer->base_addr + shared_memory->buffer->read;
-
+    
+    size_t total_size = 0;
+    
+    //replace \n with ',' in base_addr
     size_t size = strlen(read_ptr) + 1;
     for (size_t i = 0; i < size; i++) {
-        if (read_ptr[i] == '\0' || read_ptr[i] == '\n') {
-            read_ptr[i] = ','; // Reemplazar el terminador nulo por una coma
+        if (read_ptr[i] == '\n') {
+            read_ptr[i] = ',';
         }
     }
-    printf("\n(view) %s", read_ptr);
+
+    printf("\n(view POSTa) %s", read_ptr);
+
+
+
+    file_path = read_ptr;
+    total_size += strlen(file_path) + 1;
+    read_ptr += total_size;
+    printf("\n(view, fp) %s", file_path);
+
+    md5 = read_ptr;
+    total_size += strlen(md5) + 1;
+    read_ptr += total_size;
+    printf("\n(view, md5) %s", md5);
+    
+    *slave_id = atoi(read_ptr);
+    total_size += strlen(read_ptr) + 1;
+
+    printf("\n(view, slaveid) %d", *slave_id);
+
+
+
+    shared_memory->buffer->read += total_size ;
+    // printf("\n(view) %s", read_ptr);
     shared_memory->files_processed++;
     // shared_memory->buffer->read += 6;
     // size_t read = shared_memory->buffer->read;
@@ -339,11 +333,11 @@ void destroy_resources(shared_memory_adt shared_memory) {
         destroy_semaphores(shared_memory);
     }
     if (shared_memory->buffer != NULL) {
-        // if (shared_memory->buffer->base_addr != NULL) {
+         if (shared_memory->buffer->base_addr != NULL) {
              munmap(shared_memory->buffer->base_addr, shared_memory->buffer->size);
-        // }
+         }
         // free(shared_memory->buffer->base_addr);
-        // free(shared_memory->buffer);
+         free(shared_memory->buffer);
     }
     // munmap(shared_memory, 4096);
 

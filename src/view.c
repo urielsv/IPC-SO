@@ -89,11 +89,8 @@ int main(int argc, char *argv[]) {
         i++;
     } 
     
-    free(shm_path);
-    free(buff_sem_path);
-    free(mutex_sem_path);
-    /*
     destroy_resources(shared_memory);
-*/
+    free(shm_path);
+
     return 0;
 }
