@@ -86,35 +86,35 @@ shared_memory_adt attach_shared_memory(char *shm_path, char *full_buff_sem_path,
         exit(EXIT_FAILURE);
     }
 
-    shared_memory->shm = calloc(1, sizeof(shm_t));
-    if (shared_memory->shm == NULL) {
-        perror("calloc");
-        munmap(shared_memory, sizeof(struct shared_memory_cdt) + buffer_size);
-        close(fd);
-        exit(EXIT_FAILURE);
-    }
-    shared_memory->shm->fd = fd;
-    shared_memory->shm->shm_path = strdup(shm_path);
-    if (shared_memory->shm->shm_path == NULL) {
-        perror("strdup");
-        free(shared_memory->shm);
-        munmap(shared_memory, sizeof(struct shared_memory_cdt) + buffer_size);
-        close(fd);
-        exit(EXIT_FAILURE);
-    }
+    // shared_memory->shm = calloc(1, sizeof(shm_t));
+    // if (shared_memory->shm == NULL) {
+    //     perror("calloc");
+    //     munmap(shared_memory, sizeof(struct shared_memory_cdt) + buffer_size);
+    //     close(fd);
+    //     exit(EXIT_FAILURE);
+    // }
+    // shared_memory->shm->fd = fd;
+    // shared_memory->shm->shm_path = strdup(shm_path);
+    // if (shared_memory->shm->shm_path == NULL) {
+    //     perror("strdup");
+    //     free(shared_memory->shm);
+    //     munmap(shared_memory, sizeof(struct shared_memory_cdt) + buffer_size);
+    //     close(fd);
+    //     exit(EXIT_FAILURE);
+    // }
 
-    shared_memory->buffer = malloc (sizeof(buffer_t));
-    shared_memory->buffer->base_addr = malloc(buffer_size);
+    // shared_memory->buffer = malloc (sizeof(buffer_t));
+    // shared_memory->buffer->base_addr = malloc(buffer_size);
     // shared_memory->buffer = (buffer_t *)((char *)shared_memory + sizeof(struct shared_memory_cdt));
     // shared_memory->buffer->base_addr = (char *)shared_memory->buffer + sizeof(buffer_t);
-    shared_memory->buffer->size = buffer_size;
-    shared_memory->buffer->read = 0;
-    shared_memory->buffer->written = 0;
+    // shared_memory->buffer->size = buffer_size;
+    // shared_memory->buffer->read = 0;
+    // shared_memory->buffer->written = 0;
 
-    shared_memory->full_buff_sem = create_semaphore(SEM_BUFF_PREFIX, full_buff_sem_path, 0);
-    shared_memory->mutex_sem = create_semaphore(SEM_MUTEX_PREFIX, mutex_sem_path, 1);
+    // shared_memory->full_buff_sem = create_semaphore(SEM_BUFF_PREFIX, full_buff_sem_path, 0);
+    // shared_memory->mutex_sem = create_semaphore(SEM_MUTEX_PREFIX, mutex_sem_path, 1);
 
-    shared_memory->files_processed = 0;
+    // shared_memory->files_processed = 0;
 
     return shared_memory;
 }
