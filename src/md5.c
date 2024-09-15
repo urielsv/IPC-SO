@@ -18,6 +18,7 @@ int main(int argc, char *const argv[]) {
     }
     char pid[10] = {0};
     snprintf(pid, sizeof(pid), "%d", getpid());
+   
 
     shared_memory_adt shared_memory = create_shared_memory(pid, SHM_BUFFER_SIZE, INITIAL_SEM_MUTEX);
 
@@ -28,7 +29,7 @@ int main(int argc, char *const argv[]) {
     fflush(stdout);
 
     // Give time for the user to init the view before starting the slaves
-    // sleep(VIEW_SLEEP_TIME);
+     sleep(VIEW_SLEEP_TIME);
 
     int files = argc - 1;
 
@@ -39,7 +40,7 @@ int main(int argc, char *const argv[]) {
     int assigned_slaves = slave_count(files);
     slave_t *slaves[assigned_slaves];
     int init_files_per_slave = initial_files_per_slave(files, assigned_slaves);
-
+/*
     int files_assigned = 0;
     files_assigned = init_slaves(argv, init_files_per_slave, slaves, assigned_slaves);
     if (files_assigned == -1) {
@@ -59,10 +60,11 @@ int main(int argc, char *const argv[]) {
         output_from_slaves(slaves, assigned_slaves, shared_memory);
     }
 
-
+*/
     // Clean up resources
     destroy_resources(shared_memory);
-    finish_slaves(slaves, assigned_slaves);
+   // finish_slaves(slaves, assigned_slaves);
+    
 
     return 0;
 }

@@ -30,10 +30,11 @@ struct shared_memory_cdt {
 
 
 
+
 static shared_memory_adt mmap_memory(int fd, size_t buffer_size, int flags) {
     return (shared_memory_adt) mmap(
         NULL,
-        sizeof(struct shared_memory_cdt) + buffer_size + sizeof(buffer_t) + 10000,
+        sizeof(struct shared_memory_cdt) + buffer_size,
         flags, 
         MAP_SHARED,
         fd,
@@ -51,15 +52,12 @@ static void create_path_string(char **path, const char *uid, const char *prefix)
     strcat(*path, uid); 
 }
 
-
-
 static semaphore_t *create_semaphore(const char *prefix, const char *uid, int initial_value) {
     semaphore_t *semaphore = calloc(1, sizeof(semaphore_t));
     if (semaphore == NULL) {
         fprintf(stderr, "Error: Could not allocate memory for semaphore\n");
         exit(EXIT_FAILURE);
     }
-
     create_path_string(&semaphore->sem_path, uid, prefix);
 
     sem_t *sem = sem_open(semaphore->sem_path, O_CREAT | O_EXCL, 0666, initial_value);
@@ -80,8 +78,6 @@ shared_memory_adt attach_shared_memory(char *shm_path, char *full_buff_sem_path,
         perror("shm_open_util");
         exit(EXIT_FAILURE);
     }
-    //pritns paths
-
 
     shared_memory_adt shared_memory = mmap_memory(fd, buffer_size, PROT_READ | PROT_WRITE);
     if (shared_memory == MAP_FAILED) {
@@ -107,27 +103,16 @@ shared_memory_adt attach_shared_memory(char *shm_path, char *full_buff_sem_path,
         exit(EXIT_FAILURE);
     }
 
-    shared_memory->buffer = (buffer_t *)((char *)shared_memory + sizeof(struct shared_memory_cdt));
-    shared_memory->buffer->base_addr = (char *)shared_memory->buffer + sizeof(buffer_t);
+    shared_memory->buffer = malloc (sizeof(buffer_t));
+    shared_memory->buffer->base_addr = malloc(buffer_size);
+    // shared_memory->buffer = (buffer_t *)((char *)shared_memory + sizeof(struct shared_memory_cdt));
+    // shared_memory->buffer->base_addr = (char *)shared_memory->buffer + sizeof(buffer_t);
     shared_memory->buffer->size = buffer_size;
-    shared_memory->buffer->read = shared_memory->buffer->size + sizeof(buffer_t);
-    shared_memory->buffer->written = shared_memory->buffer->written + sizeof(buffer_t);
+    shared_memory->buffer->read = 0;
+    shared_memory->buffer->written = 0;
 
-    
-    shared_memory->full_buff_sem = calloc(1, sizeof(semaphore_t));
-    shared_memory->mutex_sem = calloc(1, sizeof(semaphore_t));
-    if (shared_memory->full_buff_sem == NULL || shared_memory->mutex_sem == NULL) {
-        perror("calloc");
-        free(shared_memory->shm->shm_path);
-        free(shared_memory->shm);
-        munmap(shared_memory, sizeof(struct shared_memory_cdt) + buffer_size);
-        close(fd);
-        exit(EXIT_FAILURE);
-    }
-    shared_memory->full_buff_sem->sem_path = strdup(full_buff_sem_path);
-    shared_memory->mutex_sem->sem_path = strdup(mutex_sem_path);
-    
-    open_semaphores(shared_memory);
+    shared_memory->full_buff_sem = create_semaphore(SEM_BUFF_PREFIX, full_buff_sem_path, 0);
+    shared_memory->mutex_sem = create_semaphore(SEM_MUTEX_PREFIX, mutex_sem_path, 1);
 
     shared_memory->files_processed = 0;
 
@@ -145,9 +130,7 @@ shared_memory_adt create_shared_memory(char *uid, size_t buf_size, size_t sem_va
         exit(EXIT_FAILURE);
     }
 
-    size_t total_size = sizeof(struct shared_memory_cdt) + sizeof(buffer_t) + buf_size;
-
-    if (ftruncate(fd, total_size) < 0) {
+    if (ftruncate(fd, sizeof(struct shared_memory_cdt) + buf_size) < 0) {
         perror("ftruncate");
         close(fd);
         exit(EXIT_FAILURE);
@@ -169,9 +152,9 @@ shared_memory_adt create_shared_memory(char *uid, size_t buf_size, size_t sem_va
     }
     shared_memory->shm->fd = fd;
     shared_memory->shm->shm_path = shm_path;
-
-    shared_memory->buffer = (buffer_t *)((char *)shared_memory + sizeof(struct shared_memory_cdt));
-    shared_memory->buffer->base_addr = (char *)shared_memory->buffer + sizeof(buffer_t);
+    //fprintf(stderr,"hasta shm_path llegue\n");
+    shared_memory->buffer = malloc (sizeof(buffer_t));
+    shared_memory->buffer->base_addr = malloc(buf_size);
     shared_memory->buffer->size = buf_size;
     shared_memory->buffer->read = 0;
     shared_memory->buffer->written = 0;
@@ -206,7 +189,6 @@ void close_semaphores(shared_memory_adt shared_memory) {
 
 void write_shared_memory(shared_memory_adt shared_memory, char * const file_path, char * const md5, int slave_id) {
     semaphore_down(shared_memory->mutex_sem->semaphore);
-
 
     size_t written = shared_memory->buffer->written;
     size_t file_path_size = strlen(file_path);
@@ -278,30 +260,33 @@ static void destroy_semaphores(shared_memory_adt shared_memory) {
 }
 
 void destroy_resources(shared_memory_adt shared_memory) {
-     if (shared_memory == NULL) {
+    if (shared_memory == NULL) {
         fprintf(stderr, "Error: Shared memory is NULL during destroy_shared_memory\n");
         return;
     }
 
-    if (shared_memory->full_buff_sem != NULL && shared_memory->mutex_sem != NULL) {
-        destroy_semaphores(shared_memory);  
+   
+    if (shared_memory->buffer != NULL) {
+        // if (shared_memory->buffer->base_addr != NULL) {
+        //     munmap(shared_memory->buffer->base_addr, shared_memory->buffer->size);
+        // }
+        free(shared_memory->buffer->base_addr);
+        free(shared_memory->buffer);
     }
 
     if (shared_memory->shm != NULL) {
-        if (shm_unlink(shared_memory->shm->shm_path) == -1) {
-            perror("shm_unlink");
-        }
-        if (close(shared_memory->shm->fd) == -1) {
-            perror("close shm fd");
-        }
-        free(shared_memory->shm->shm_path);  
-        free(shared_memory->shm);            
+        close(shared_memory->shm->fd);
+        shm_unlink(shared_memory->shm->shm_path);
+        free(shared_memory->shm->shm_path);
+        free(shared_memory->shm);
     }
 
-    size_t total_size = sizeof(struct shared_memory_cdt) + sizeof(buffer_t) + shared_memory->buffer->size;
-    if (munmap(shared_memory, total_size) == -1) {
-        perror("munmap");
+    if (shared_memory->full_buff_sem != NULL && shared_memory->mutex_sem != NULL) {
+        destroy_semaphores(shared_memory);
     }
+     munmap(shared_memory, 4096);
+
+    //free(shared_memory);
 }
 
 void unlink_all_semaphores(shared_memory_adt shared_memory) {

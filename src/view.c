@@ -67,9 +67,20 @@ int main(int argc, char *argv[]) {
     char *buff_sem_path = NULL;
     char *mutex_sem_path = NULL;
     load_parameters(argc, argv, &shm_path, &buff_sem_path, &mutex_sem_path);
+
+    fprintf(stderr,"%s\n",shm_path);
+    fprintf(stderr,"%s\n",buff_sem_path); 
+    fprintf(stderr,"%s\n",mutex_sem_path);
+
+    free(shm_path);
+    free(buff_sem_path);
+    free(mutex_sem_path);
+/*
+    
     
     shared_memory_adt shared_memory = attach_shared_memory(shm_path, buff_sem_path, mutex_sem_path, SHM_BUFFER_SIZE);
 
+    
     char file_path[BUFF_SIZE];
     char md5[ENC_SIZE + 1];
     int slave_id;
@@ -84,6 +95,6 @@ int main(int argc, char *argv[]) {
     free(buff_sem_path);
     free(mutex_sem_path);
     destroy_resources(shared_memory);
-
+*/
     return 0;
 }
