@@ -1,6 +1,3 @@
-#include "include/shm_utils.h"
-#include "include/utils.h"
-#include "include/defs.h"
 #include "include/shm_manager.h"
 
 typedef struct buffer_t {
@@ -27,9 +24,6 @@ struct shared_memory_cdt {
     semaphore_t *mutex_sem;
     shm_t *shm;
 };
-
-
-
 
 static char *mmap_buffer(int fd, size_t buffer_size, int flags) {
     return (char *) mmap(
@@ -72,23 +66,19 @@ static semaphore_t *create_semaphore(const char *prefix, const char *uid, int in
     semaphore->semaphore = sem;
     return semaphore;
 }
+
 shared_memory_adt attach_shared_memory(char *shm_path, char *full_buff_sem_path, char *mutex_sem_path, size_t buffer_size) {
-    printf("SHJM!! %s\n", shm_path);
-    printf("SHJM!! %s\n", full_buff_sem_path);
-    printf("SHJM!! %s\n", mutex_sem_path);
+
     int fd = shm_open_util(shm_path, O_RDWR, "attaching shared memory");
     if (fd < 0) {
         perror("shm_open_util");
         exit(EXIT_FAILURE);
     }
-    fprintf(stderr, "FD: %d", fd);
 
 
     shared_memory_adt shared_memory = calloc(1, sizeof(struct shared_memory_cdt));
     shared_memory->buffer = calloc(1, sizeof(buffer_t));
     shared_memory->buffer->base_addr = mmap_buffer(fd, buffer_size, PROT_READ | PROT_WRITE);
-    // shared_memory->buffer->base_addr = shared_memory->buffer;
-    fprintf(stderr,"Base addr was read from: %p", shared_memory->buffer);
     if (shared_memory->buffer == MAP_FAILED) {
         perror("mmap");
         close(fd);
@@ -102,33 +92,9 @@ shared_memory_adt attach_shared_memory(char *shm_path, char *full_buff_sem_path,
     shared_memory->mutex_sem->sem_path = mutex_sem_path;
 
     open_semaphores(shared_memory);
-    // shared_memory->shm = calloc(1, sizeof(shm_t));
-    // if (shared_memory->shm == NULL) {
-    //     perror("calloc");
-    //     munmap(shared_memory, sizeof(struct shared_memory_cdt) + buffer_size);
-    //     close(fd);
-    //     exit(EXIT_FAILURE);
-    // }
-    // shared_memory->shm->fd = fd;
-    // shared_memory->shm->shm_path = strdup(shm_path);
-    // if (shared_memory->shm->shm_path == NULL) {
-    //     perror("strdup");
-    //     free(shared_memory->shm);
-    //     munmap(shared_memory, sizeof(struct shared_memory_cdt) + buffer_size);
-    //     close(fd);
-    //     exit(EXIT_FAILURE);
-    // }
 
-    // shared_memory->buffer = malloc (sizeof(buffer_t));
-    // shared_memory->buffer->base_addr = malloc(buffer_size);
-    // shared_memory->buffer = (buffer_t *)((char *)shared_memory + sizeof(struct shared_memory_cdt));
-    // shared_memory->buffer->base_addr = (char *)shared_memory->buffer + sizeof(buffer_t);
-    // shared_memory->buffer->size = buffer_size;
      shared_memory->buffer->read = 0;
      shared_memory->buffer->written = 0;
-
-
-    // shared_memory->files_processed = 0;
 
     return shared_memory;
 }
@@ -143,7 +109,6 @@ shared_memory_adt create_shared_memory(char *uid, size_t buf_size, size_t sem_va
         perror("shm_open_util");
         exit(EXIT_FAILURE);
     }
-    fprintf(stderr, "FD: %d", fd);
 
     if (ftruncate(fd, sizeof(struct shared_memory_cdt) + buf_size) < 0) {
         perror("ftruncate");
@@ -154,9 +119,7 @@ shared_memory_adt create_shared_memory(char *uid, size_t buf_size, size_t sem_va
     shared_memory_adt shared_memory = calloc(1, sizeof(struct shared_memory_cdt));
     shared_memory->buffer = calloc(1, sizeof(buffer_t));
     shared_memory->buffer->base_addr = mmap_buffer(fd, buf_size, PROT_READ | PROT_WRITE);
-    //shared_memory->buffer = malloc(sizeof(buffer_t))
-    // shared_memory->buffer = mmap_buffer(fd, buf_size, PROT_READ | PROT_WRITE);
-    fprintf(stderr, "\nBase addr was created in : %p", shared_memory->buffer);
+   
     if (shared_memory->buffer == MAP_FAILED) {
         perror("mmap");
         close(fd);
@@ -166,7 +129,7 @@ shared_memory_adt create_shared_memory(char *uid, size_t buf_size, size_t sem_va
     shared_memory->shm = calloc(1, sizeof(shm_t));
     if (shared_memory->shm == NULL) {
         perror("calloc");
-        // munmap(shared_memory, sizeof(struct shared_memory_cdt) + buf_size);
+        
         close(fd);
         exit(EXIT_FAILURE);
     }
@@ -210,8 +173,6 @@ void write_shared_memory(shared_memory_adt shared_memory, char * const file_path
 
     size_t written = shared_memory->buffer->written;
 
-
-
     size_t slave_id_size = snprintf(NULL, 0, "%d", slave_id);
     char slave_id_str[slave_id_size + 1];
     snprintf(slave_id_str, slave_id_size + 1, "%d", slave_id);
@@ -223,19 +184,19 @@ void write_shared_memory(shared_memory_adt shared_memory, char * const file_path
 
     curr_size = strlen(file_path) + 1;
     memcpy(write_ptr, file_path, curr_size);
-    fprintf(stderr, "\n(write, file_path) %s", write_ptr);
+   // fprintf(stderr, "\n(write, file_path) %s", write_ptr);
     total_size += curr_size;
     write_ptr += curr_size;
 
     curr_size = strlen(md5) + 1;
     memcpy(write_ptr, md5, curr_size);
-    fprintf(stderr, "\n(write, md5) %s", write_ptr);
+    //fprintf(stderr, "\n(write, md5) %s", write_ptr);
     write_ptr += curr_size;
     total_size += curr_size;
     
     curr_size = strlen(slave_id_str) + 1;
     memcpy(write_ptr, slave_id_str, curr_size);
-    fprintf(stderr, "\n(write, slave_id) %s", write_ptr);
+    //fprintf(stderr, "\n(write, slave_id) %s", write_ptr);
     write_ptr += curr_size;
     total_size += curr_size;
 
@@ -249,14 +210,14 @@ void write_shared_memory(shared_memory_adt shared_memory, char * const file_path
 
 
 void strcopy(char *dest, const char *src) {
-    while (*src != '\0') { // Mientras no se llegue al final de la cadena
-        *dest = *src; // Copiar carácter de src a dest
+    while (*src != '\0') { 
+        *dest = *src; 
         fprintf(stderr, "Copying character: '%c'\n", *src); // Imprimir carácter copiado
-        dest++; // Mover puntero a la siguiente posición en dest
-        src++; // Mover puntero a la siguiente posición en src
+        dest++; 
+        src++; 
     }
-    *dest = '\0'; // Agregar el carácter nulo al final de la cadena copiada
-    fprintf(stderr, "Copying character: '%c'\n", *src); // Imprimir el carácter nulo
+    *dest = '\0';
+    fprintf(stderr, "Copying character: '%c'\n", *src); 
 }
 
 
@@ -264,76 +225,55 @@ void read_shared_memory(shared_memory_adt shared_memory, char *file_path, char *
     
     semaphore_down(shared_memory->full_buff_sem->semaphore);
     semaphore_down(shared_memory->mutex_sem->semaphore);
-    fprintf(stderr, "\n\nReading from shared memory\n");
+    //fprintf(stderr, "\n\nReading from shared memory\n");
 
     char *read_ptr = shared_memory->buffer->base_addr + shared_memory->buffer->read;
     size_t total_size = 0;
-    fprintf(stderr, "\n(view, read, expeted incremention by 45 each time) %d", shared_memory->buffer->read);
+    //fprintf(stderr, "\n(view, read, expeted incremention by 45 each time) %d", shared_memory->buffer->read);
 
 
       for (size_t i = 0; i < 45;) {
         // Imprimir caracteres hasta el siguiente carácter nulo
-        fprintf(stderr, "\nData: ");
+       // fprintf(stderr, "\nData: ");
         while(i < 1000) {
-            fprintf(stderr, "%c", shared_memory->buffer->base_addr[i]);
+          //  fprintf(stderr, "%c", shared_memory->buffer->base_addr[i]);
             if(shared_memory->buffer->base_addr[i] == '\0') {
-                fprintf(stderr, ",");
+              //  fprintf(stderr, ",");
             }
             i++;
         }
        }
 
-    fprintf(stderr, "\n");fprintf(stderr, "\n");
+    //fprintf(stderr, "\n");fprintf(stderr, "\n");
 
     size_t curr_size = 0;
-
+    fprintf(stderr, "----------------------");
     strcpy(file_path, read_ptr);
-    fprintf(stderr,"\n(view, fp) %s", file_path);
+    fprintf(stderr,"\nFilename: ./%s\n", file_path);
     curr_size = strlen(file_path) + 1;
     total_size += curr_size;
     read_ptr += curr_size;
 
 
-    //fprintf(stderr,"\n(view, read_ptr expected md5) %s", read_ptr);
     strcpy(md5, read_ptr);
-    fprintf(stderr,"\n(view, md5) %s", md5);
+    fprintf(stderr,"md5: %s\n", md5);
     curr_size = strlen(md5) + 1;
     total_size += curr_size;
     read_ptr += curr_size;
 
 
     strcpy(slave_id, read_ptr);
-    fprintf(stderr,"\n(view, slaveid) %s", slave_id);
+    fprintf(stderr,"PID: %s\n", slave_id);
     total_size += strlen(read_ptr) + 1;
 
-
+     fprintf(stderr, "----------------------\n");
 
     shared_memory->buffer->read += total_size;
-    fprintf(stderr,"\n(view, total size expected 40 aprox) %d", total_size);
+    //fprintf(stderr,"\n(view, total size expected 40 aprox) %d", total_size);
 
-    // printf("\n(view) %s", read_ptr);
     shared_memory->files_processed++;
 
     semaphore_up(shared_memory->mutex_sem->semaphore);
-    //semaphore_up(shared_memory->full_buff_sem->semaphore);
-    // shared_memory->buffer->read += 6;
-    // size_t read = shared_memory->buffer->read;
-    // char *buffer = shared_memory->buffer->base_addr + read;
-    // printf("read_from_shm: %s\n", buffer);
-    // char *read_ptr = buffer;
-
-    // strcpy(file_path, read_ptr);
-    // read_ptr += strlen(file_path) + 1;
-
-    // strcpy(md5, read_ptr);
-    // read_ptr += strlen(md5) + 1;
-
-    // *slave_id = atoi(read_ptr);
-    // read_ptr += strlen(read_ptr) + 1;
-
-    // shared_memory->buffer->read += (read_ptr - buffer) + 1;
-
-    // semaphore_up(shared_memory->full_buff_sem->semaphore);
 }
 
 

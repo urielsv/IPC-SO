@@ -13,6 +13,10 @@
 #include <sys/stat.h>
 #include <dirent.h>
 
+#include "shm_utils.h"
+#include "utils.h"
+#include "defs.h"
+
 typedef struct shared_memory_cdt *shared_memory_adt;
 
 // Function to create shared memory and associated semaphores
