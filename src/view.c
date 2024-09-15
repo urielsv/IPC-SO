@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
     char *buff_sem_path = NULL;
     char *mutex_sem_path = NULL;
     load_parameters(argc, argv, &shm_path, &buff_sem_path, &mutex_sem_path);
-
+    
     shared_memory_adt shared_memory = attach_shared_memory(shm_path, buff_sem_path, mutex_sem_path, SHM_BUFFER_SIZE);
 
     char file_path[BUFF_SIZE];
