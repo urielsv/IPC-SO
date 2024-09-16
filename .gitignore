@@ -5,3 +5,7 @@ src/*.bin
 .vscode/
 .idea
 .bash_history
+PVS-Studio.log
+report.tasks
+strace_out
+.lesshst
