@@ -80,7 +80,6 @@ int main(int argc, char *argv[]) {
     char md5[ENC_SIZE + 1];
     char slave_id[4];
     int i = 0;
-    char *buff;
     // sleep(10);
     while (i <9) {
         read_shared_memory(shared_memory, file_path, md5, slave_id);

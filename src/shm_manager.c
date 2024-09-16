@@ -184,19 +184,16 @@ void write_shared_memory(shared_memory_adt shared_memory, char * const file_path
 
     curr_size = strlen(file_path) + 1;
     memcpy(write_ptr, file_path, curr_size);
-   // fprintf(stderr, "\n(write, file_path) %s", write_ptr);
     total_size += curr_size;
     write_ptr += curr_size;
 
     curr_size = strlen(md5) + 1;
     memcpy(write_ptr, md5, curr_size);
-    //fprintf(stderr, "\n(write, md5) %s", write_ptr);
     write_ptr += curr_size;
     total_size += curr_size;
     
     curr_size = strlen(slave_id_str) + 1;
     memcpy(write_ptr, slave_id_str, curr_size);
-    //fprintf(stderr, "\n(write, slave_id) %s", write_ptr);
     write_ptr += curr_size;
     total_size += curr_size;
 
@@ -225,26 +222,9 @@ void read_shared_memory(shared_memory_adt shared_memory, char *file_path, char *
     
     semaphore_down(shared_memory->full_buff_sem->semaphore);
     semaphore_down(shared_memory->mutex_sem->semaphore);
-    //fprintf(stderr, "\n\nReading from shared memory\n");
 
     char *read_ptr = shared_memory->buffer->base_addr + shared_memory->buffer->read;
     size_t total_size = 0;
-    //fprintf(stderr, "\n(view, read, expeted incremention by 45 each time) %d", shared_memory->buffer->read);
-
-
-      for (size_t i = 0; i < 45;) {
-        // Imprimir caracteres hasta el siguiente carácter nulo
-       // fprintf(stderr, "\nData: ");
-        while(i < 1000) {
-          //  fprintf(stderr, "%c", shared_memory->buffer->base_addr[i]);
-            if(shared_memory->buffer->base_addr[i] == '\0') {
-              //  fprintf(stderr, ",");
-            }
-            i++;
-        }
-       }
-
-    //fprintf(stderr, "\n");fprintf(stderr, "\n");
 
     size_t curr_size = 0;
     fprintf(stderr, "----------------------");
@@ -269,7 +249,6 @@ void read_shared_memory(shared_memory_adt shared_memory, char *file_path, char *
      fprintf(stderr, "----------------------\n");
 
     shared_memory->buffer->read += total_size;
-    //fprintf(stderr,"\n(view, total size expected 40 aprox) %d", total_size);
 
     shared_memory->files_processed++;
 

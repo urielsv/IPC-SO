@@ -1,7 +1,7 @@
 
-#include "include/md5.h"
+ #include "include/md5.h"
 
-int main(int argc, char *const argv[]) {
+ int main(int argc, char *const argv[]) {
     // Validate arguments
     if (argc < REQUIRED_ARGS) {
         printf("Usage: %s <file1> <file2> <...> <fileN>\n", argv[0]);
@@ -28,7 +28,7 @@ int main(int argc, char *const argv[]) {
     printf("%s\n", get_mutex_sem_path(shared_memory));
     fflush(stdout);
 
-    // Give time for the user to init the view before starting the slaves
+     // Give time for the user to init the view before starting the slaves
      sleep(VIEW_SLEEP_TIME);
 
     int files = argc - 1;
@@ -49,27 +49,35 @@ int main(int argc, char *const argv[]) {
         return 1;
     }
 
-    // Now we start processing the remaining files
-    while (get_processed_files(shared_memory) < files) {
+    int output_file_fd;
+    if ( (output_file_fd = open("output.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644) ) == -1) {
+         perror("ERROR: error when opening file.txt");
+        return 1;
+    }
 
-        // Check if any slave is available
+    // Now we start processing the remaining files
+     while (get_processed_files(shared_memory) <= files) {
+       
+         // Check if any slave is available
         for (int i = 0; i < assigned_slaves; i++) {
             if (slaves[i]->is_available && files_assigned < files) {
                 assign_file(slaves[i], argv[++files_assigned]);
             }
         }
-        output_from_slaves(slaves, assigned_slaves, shared_memory);
-    }
+         output_from_slaves(slaves, assigned_slaves, shared_memory, output_file_fd);
+     }
 
-    // Clean up resources
-    destroy_resources(shared_memory);
-    finish_slaves(slaves, assigned_slaves);
-    
-
-    return 0;
+//     // Clean up resources
+     destroy_resources(shared_memory);
+     finish_slaves(slaves, assigned_slaves);
+    if (close(output_file_fd) != 0) {
+    perror("Error closing file");
+    return 1;
 }
+     return 0;
+ }
 
-int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt shared_memory) {
+int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt shared_memory, int output) {
     fd_set read_fds;
 
     FD_ZERO(&read_fds);
@@ -111,14 +119,11 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt
 
                 // Add a null terminator to the buffer so we can avoid printing garbage
                 buffer[bytes_read] = '\0';
-
+                
+                write(output,"hello\n",6);
+                //fprintf(output,"-------------------\nname: ./%s\nmd5: %s\nPID: %d\n-------------------\n", slaves[i]->file_path,buffer,slaves[i]->pid);          
                 write_shared_memory(shared_memory, slaves[i]->file_path, buffer, slaves[i]->pid);
 
-// char file_path[BUFF_SIZE];
-//     char md5[ENC_SIZE + 1];
-//     int slave_id;
-//         read_shared_memory(shared_memory, file_path, md5, &slave_id);
-//                 fprintf(stderr, "Printing from master: %s %s (%d)\n", file_path,md5, slave_id);
             }
         }
     }
