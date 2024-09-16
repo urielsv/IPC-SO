@@ -1,18 +1,6 @@
 #ifndef __SHM_MANAGER_H__
 #define __SHM_MANAGER_H__
 
-#include <stddef.h>
-#include <semaphore.h>
-#include <string.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <sys/stat.h>
-#include <dirent.h>
-
 #include "shm_utils.h"
 #include "utils.h"
 #include "defs.h"

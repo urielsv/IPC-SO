@@ -7,6 +7,7 @@ CC=gcc
 EXECS=md5 slave view
 SRCS=src/*.c
 OBJS=$(SRCS:.c=.o)
+TXT=./*.txt
 
 all: $(EXECS)
 
@@ -27,7 +28,7 @@ src/%.o: src/%.c
 
 # Clean up build files
 clean:
-	rm -f $(OBJS) $(EXECS)
+	rm -f $(OBJS) $(EXECS) $(TXT)
 
 
 # Phony targets

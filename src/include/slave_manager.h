@@ -1,9 +1,8 @@
 #ifndef __SLAVE_MANAGER_H__
 #define __SLAVE_MANAGER_H__
 
-#include <stdlib.h>
-#include <stdint.h>
-#include <unistd.h>
+#include "utils.h"
+#include "defs.h"
 
 typedef struct slave_t {
     pid_t pid;

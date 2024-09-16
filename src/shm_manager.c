@@ -85,7 +85,7 @@ shared_memory_adt attach_shared_memory(char *shm_path, char *full_buff_sem_path,
         exit(EXIT_FAILURE);
     }
 
-    shared_memory->shm->fd;
+    //shared_memory->shm->fd;
     shared_memory->full_buff_sem = calloc(1, sizeof(semaphore_t));
     shared_memory->mutex_sem = calloc(1, sizeof(semaphore_t));
     shared_memory->full_buff_sem->sem_path = full_buff_sem_path;

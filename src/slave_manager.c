@@ -1,29 +1,13 @@
 /*
-** Slave Manager
-**
-** This program is responsible for managing the slave processes.
-** It creates the slave processes and sends the files to be analyzed
-** by the slaves.
-**
+
 ** Author: Fernando Li                      <feli@itba.edu.ar>
 ** Author: Felipe Venturino                 <fventurino@itba.edu.ar>
 ** Author: Uriel Sosa Vazquez               <usosavazquez@itba.edu.ar>
-**
-** Last modified: 03-09-2024 (dd-mm-yyyy)
+
 */
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/wait.h>
-#include <unistd.h>
 
 #include "include/slave_manager.h"
-#include "include/utils.h"
-#include "include/defs.h"
 
-
-/*
- * Calculate the number of files per slave
- */
 
 static void malloc_slave(slave_t **slave) {
     *slave = (slave_t *) malloc(sizeof(slave_t));

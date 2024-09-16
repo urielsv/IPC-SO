@@ -7,6 +7,7 @@
 #define INITIAL_SEM_MUTEX       1
 #define VIEW_SLEEP_TIME         2
 #define BUF_FILE_PATH_SIZE      128
+#define NUMBER_OF_PIDS          10
 
 #define SLAVE_PATH              "./slave"
 

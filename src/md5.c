@@ -16,7 +16,7 @@
             return 1;
         }
     }
-    char pid[10] = {0};
+    char pid[NUMBER_OF_PIDS] = {0};
     snprintf(pid, sizeof(pid), "%d", getpid());
    
 
@@ -32,9 +32,6 @@
      sleep(VIEW_SLEEP_TIME);
 
     int files = argc - 1;
-
-    // Create shared memory
-    // transform getpid to string
 
     // Initialize slaves
     int assigned_slaves = slave_count(files);
@@ -56,7 +53,7 @@
     }
 
     // Now we start processing the remaining files
-     while (get_processed_files(shared_memory) <= files) {
+     while (get_processed_files(shared_memory) < files) {
        
          // Check if any slave is available
         for (int i = 0; i < assigned_slaves; i++) {
@@ -67,13 +64,15 @@
          output_from_slaves(slaves, assigned_slaves, shared_memory, output_file_fd);
      }
 
-//     // Clean up resources
-     destroy_resources(shared_memory);
-     finish_slaves(slaves, assigned_slaves);
+    // Clean up resources
+    destroy_resources(shared_memory);
+    finish_slaves(slaves, assigned_slaves);
+
     if (close(output_file_fd) != 0) {
-    perror("Error closing file");
-    return 1;
-}
+        perror("Error closing file");
+        return 1;
+    }
+
      return 0;
  }
 
@@ -108,7 +107,7 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt
     for (int i = 0; i < slave_count; i++) {
         if (FD_ISSET(slaves[i]->slave2_master_fd[0], &read_fds)) {
             // Clean the buffer
-            char buffer[1024] = {0};
+            char buffer[BUFF_SIZE] = {0};
 
             // Read from the file descriptor and process the data
             ssize_t bytes_read = read_pipe(slaves[i]->slave2_master_fd[0], "output_from_slaves", buffer, sizeof(buffer));
@@ -120,8 +119,8 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt
                 // Add a null terminator to the buffer so we can avoid printing garbage
                 buffer[bytes_read] = '\0';
                 
-                char string[1048] = {0};
-                snprintf(string, sizeof(buffer), "-------------------\nname: ./%s\nmd5: %s\nPID: %d\n-------------------\n", slaves[i]->file_path,buffer,slaves[i]->pid);   
+                char string[BUFF_SIZE*2] = {0};
+                snprintf(string, sizeof(buffer), "-------------------\nname: %s\nmd5: %s\nPID: %d\n-------------------\n", slaves[i]->file_path,buffer,slaves[i]->pid);   
                 write(output,string,strlen(string));
                 write_shared_memory(shared_memory, slaves[i]->file_path, buffer, slaves[i]->pid);
 

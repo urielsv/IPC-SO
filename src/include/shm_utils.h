@@ -1,12 +1,7 @@
 #ifndef _SHM_UTILS_H
 #define _SHM_UTILS_H
 
-#include <semaphore.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/fcntl.h>
-#include <sys/mman.h>
-#include <unistd.h>
+#include "utils.h"
 
 sem_t* sem_open_util(const char *name, int oflag);
 void ftruncate_util(int shm_fd, size_t size, char *const shm_error);

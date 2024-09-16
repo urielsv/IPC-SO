@@ -1,10 +1,34 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "include/view.h"
 
-#include "include/utils.h"
-#include "include/defs.h"
-#include "include/shm_manager.h"
+int main(int argc, char *argv[]) {
+
+    
+    setvbuf_pipe(stdin, "view process (stdin)");
+    setvbuf_pipe(stdout, "view process (stdout)");
+    
+    char *shm_path = NULL;
+    char *buff_sem_path = NULL;
+    char *mutex_sem_path = NULL;
+    load_parameters(argc, argv, &shm_path, &buff_sem_path, &mutex_sem_path);
+
+    shared_memory_adt shared_memory = attach_shared_memory(shm_path, buff_sem_path, mutex_sem_path, SHM_BUFFER_SIZE);
+
+
+    char file_path[BUFF_SIZE];
+    char md5[ENC_SIZE + 1];
+    char slave_id[4];
+    int i = 0;
+
+    while (i <9) {
+        read_shared_memory(shared_memory, file_path, md5, slave_id);
+        i++;
+    } 
+    
+    destroy_resources(shared_memory);
+    free(shm_path);
+
+    return 0;
+}
 
 // Utility function to read a line from stdin and remove the newline character
 char* read_line_from_stdin() {
@@ -46,50 +70,6 @@ void load_parameters(int argc, char *argv[], char **shm_path, char **buff_sem_pa
     *shm_path = read_line_from_stdin();
     *buff_sem_path = read_line_from_stdin();
     *mutex_sem_path = read_line_from_stdin();
-    
-    // if (validate_arguments(*shm_path, *buff_sem_path, *mutex_sem_path) == -1) {
-    //     fprintf(stderr, "Error: Invalid arguments\n");
-    //     free(*shm_path);
-    //     free(*buff_sem_path);
-    //     free(*mutex_sem_path);
-    //     exit(EXIT_FAILURE);
-    // }
 
 }
 
-int main(int argc, char *argv[]) {
-
-    
-    setvbuf_pipe(stdin, "view process (stdin)");
-    setvbuf_pipe(stdout, "view process (stdout)");
-    
-    char *shm_path = NULL;
-    char *buff_sem_path = NULL;
-    char *mutex_sem_path = NULL;
-    load_parameters(argc, argv, &shm_path, &buff_sem_path, &mutex_sem_path);
-
-    // fprintf(stderr,"%s\n",shm_path);
-    // fprintf(stderr,"%s\n",buff_sem_path); 
-    // fprintf(stderr,"%s\n",mutex_sem_path);
-
-
-    shared_memory_adt shared_memory = attach_shared_memory(shm_path, buff_sem_path, mutex_sem_path, SHM_BUFFER_SIZE);
-
-
-    char file_path[BUFF_SIZE];
-    char md5[ENC_SIZE + 1];
-    char slave_id[4];
-    int i = 0;
-    // sleep(10);
-    while (i <9) {
-        read_shared_memory(shared_memory, file_path, md5, slave_id);
-        //printf("buff: %s\n", buff);
-        // printf("File: %s, MD5: %s, Slave ID: %d\n", file_path, md5, slave_id);
-        i++;
-    } 
-    
-    destroy_resources(shared_memory);
-    free(shm_path);
-
-    return 0;
-}
