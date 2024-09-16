@@ -55,6 +55,7 @@ int init_slaves(char *const argv[], uint32_t files_per_slave, slave_t **slaves, 
 
         char *files[files_per_slave];
         for (int j = 0; j < files_per_slave && argv[initial_idx] != NULL; j++) {
+            fprintf(stderr, "File %d: %s, slave: %d\n", j, argv[initial_idx], i);
             files[j] = argv[initial_idx++];
         }
         create_slave(slaves[i], files, files_per_slave);
@@ -93,6 +94,10 @@ int assign_file(slave_t *slave, char *const file_path) {
     free(new_file_path);
     return 0;
 }
+
+
+
+
 
 
 void debug_slave(slave_t *slave) {
@@ -149,6 +154,7 @@ pid_t create_slave(slave_t *slave, char *const files_path[], uint32_t files_coun
         
         // Assign initial files 
         for (int i = 0; i < files_count; i++) {
+            fprintf(stderr, "Assigning file %s to slave\n", files_path[i]);
             if (assign_file(slave, files_path[i]) == -1) {
                 fprintf(stderr, "Error: Could not assign file to slave\n");
                 exit(EXIT_FAILURE);

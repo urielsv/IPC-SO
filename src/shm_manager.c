@@ -329,6 +329,10 @@ void deattach_shared_memory(shared_memory_adt shared_memory) {
     free(shared_memory);
 }
 
+void set_processed_files(size_t files, shared_memory_adt shared_memory) {
+    shared_memory->files_processed = files;
+}
+
 size_t get_processed_files(shared_memory_adt shared_memory) {
     return shared_memory->files_processed;
 }

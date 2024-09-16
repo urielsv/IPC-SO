@@ -32,6 +32,8 @@ void destroy_resources(shared_memory_adt shared_memory);
 // Function to unlink all semaphores
 void unlink_all_semaphores(shared_memory_adt shared_memory);
 
+void set_processed_files(size_t files, shared_memory_adt shared_memory);
+
 // Function to get the number of processed files
 size_t get_processed_files(shared_memory_adt shared_memory);
 
