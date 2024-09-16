@@ -4,13 +4,23 @@
 
 int main(int argc, char *argv[]) {
 
-
-    setvbuf_pipe(stdin, "view process (stdin)");
-    setvbuf_pipe(stdout, "view process (stdout)");
-
     char *shm_path = NULL;
     char *buff_sem_path = NULL;
     char *mutex_sem_path = NULL;
+
+    if (argc>1){
+
+        if (argc!=4){
+            fprintf(stderr, "Only three parameters are allowed for the view process\n");
+            exit(EXIT_FAILURE);
+        }
+
+    }
+    else {
+        setvbuf_pipe(stdin, "view process (stdin)");
+        setvbuf_pipe(stdout, "view process (stdout)");
+    }
+
     load_parameters(argc, argv, &shm_path, &buff_sem_path, &mutex_sem_path);
 
     shared_memory_adt shared_memory = attach_shared_memory(shm_path, buff_sem_path, mutex_sem_path, SHM_BUFFER_SIZE);

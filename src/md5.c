@@ -87,7 +87,7 @@
      return 0;
  }
 
-char* output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt shared_memory) {
+int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt shared_memory) {
     fd_set read_fds;
 
     FD_ZERO(&read_fds);
