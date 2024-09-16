@@ -2,10 +2,10 @@
 
 int main(int argc, char *argv[]) {
 
-    
+
     setvbuf_pipe(stdin, "view process (stdin)");
     setvbuf_pipe(stdout, "view process (stdout)");
-    
+
     char *shm_path = NULL;
     char *buff_sem_path = NULL;
     char *mutex_sem_path = NULL;
@@ -16,15 +16,13 @@ int main(int argc, char *argv[]) {
 
     char file_path[BUFF_SIZE];
     char md5[ENC_SIZE + 1];
-    char slave_id[4];
-    int i = 0;
+    char slave_id[PID_MAX_SIZE];
+    while (read_shared_memory(shared_memory, file_path, md5, slave_id) > 0) {
+        fprintf(stderr, "(file: %s) %s, %s\n", file_path, md5, slave_id);
+    }
 
-    while (i <9) {
-        read_shared_memory(shared_memory, file_path, md5, slave_id);
-        i++;
-    } 
-    
-    destroy_resources(shared_memory);
+    printf("\nfinishing\n");
+    deattach_shared_memory(shared_memory);
     free(shm_path);
 
     return 0;
@@ -72,4 +70,3 @@ void load_parameters(int argc, char *argv[], char **shm_path, char **buff_sem_pa
     *mutex_sem_path = read_line_from_stdin();
 
 }
-

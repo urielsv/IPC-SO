@@ -1,13 +1,13 @@
 #define MD5_HASH_SIZE           32
 #define SHM_BUFFER_SIZE         4096
 #define REQUIRED_ARGS           2
-#define MIN_FILES               20
+#define MIN_FILES               10
 #define DEFAULT_SLAVE_COUNT     3
 #define MD5_HASH                32
 #define INITIAL_SEM_MUTEX       1
 #define VIEW_SLEEP_TIME         2
 #define BUF_FILE_PATH_SIZE      128
-#define NUMBER_OF_PIDS          10
+#define PID_MAX_SIZE            6
 
 #define SLAVE_PATH              "./slave"
 

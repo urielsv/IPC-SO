@@ -15,7 +15,7 @@ shared_memory_adt attach_shared_memory(char *shm_path, char *full_buff_sem_path,
 
 // Function to read data from shared memory
 // void read_shared_memory(shared_memory_adt shared_memory, char *file_path, char *md5, int *slave_id);
-void read_shared_memory(shared_memory_adt shared_memory, char *file_path, char *md5, char *slave_id);
+size_t read_shared_memory(shared_memory_adt shared_memory, char *file_path, char *md5, char *slave_id);
 
 // Function to write data to shared memory
 void write_shared_memory(shared_memory_adt shared_memory, char *const file_path, char *const md5, int slave_id);
@@ -43,5 +43,6 @@ char *get_buff_sem_path(shared_memory_adt shared_memory);
 
 // Function to get the mutex semaphore path
 char *get_mutex_sem_path(shared_memory_adt shared_memory);
+void deattach_shared_memory(shared_memory_adt shared_memory);
 
 #endif // __SHM_MANAGER_H__

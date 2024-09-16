@@ -1,6 +1,6 @@
 
- #include "include/md5.h"
-
+#include "include/md5.h"
+#include "include/defs.h"
  int main(int argc, char *const argv[]) {
     // Validate arguments
     if (argc < REQUIRED_ARGS) {
@@ -16,9 +16,9 @@
             return 1;
         }
     }
-    char pid[NUMBER_OF_PIDS] = {0};
+    char pid[PID_MAX_SIZE] = {0};
     snprintf(pid, sizeof(pid), "%d", getpid());
-   
+
 
     shared_memory_adt shared_memory = create_shared_memory(pid, SHM_BUFFER_SIZE, INITIAL_SEM_MUTEX);
 
@@ -54,16 +54,18 @@
 
     // Now we start processing the remaining files
      while (get_processed_files(shared_memory) < files) {
-       
+
          // Check if any slave is available
         for (int i = 0; i < assigned_slaves; i++) {
             if (slaves[i]->is_available && files_assigned < files) {
                 assign_file(slaves[i], argv[++files_assigned]);
             }
         }
-         output_from_slaves(slaves, assigned_slaves, shared_memory, output_file_fd);
+        output_from_slaves(slaves, assigned_slaves, shared_memory);
      }
 
+    // Now we write to the shm an empty string to signal the view process that we are done
+    write_shared_memory(shared_memory, "", "", 0);
     // Clean up resources
     destroy_resources(shared_memory);
     finish_slaves(slaves, assigned_slaves);
@@ -76,7 +78,7 @@
      return 0;
  }
 
-int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt shared_memory, int output) {
+int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt shared_memory) {
     fd_set read_fds;
 
     FD_ZERO(&read_fds);
@@ -106,25 +108,19 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt
 
     for (int i = 0; i < slave_count; i++) {
         if (FD_ISSET(slaves[i]->slave2_master_fd[0], &read_fds)) {
-            // Clean the buffer
             char buffer[BUFF_SIZE] = {0};
 
-            // Read from the file descriptor and process the data
             ssize_t bytes_read = read_pipe(slaves[i]->slave2_master_fd[0], "output_from_slaves", buffer, sizeof(buffer));
 
-            // print the output from the slave temp
             if (bytes_read > 0) {
                 slaves[i]->is_available = 1;
 
                 // Add a null terminator to the buffer so we can avoid printing garbage
                 buffer[bytes_read] = '\0';
-                
-                char string[BUFF_SIZE*2] = {0};
-                snprintf(string, sizeof(buffer), "-------------------\nname: %s\nmd5: %s\nPID: %d\n-------------------\n", slaves[i]->file_path,buffer,slaves[i]->pid);   
-                write(output,string,strlen(string));
+
                 write_shared_memory(shared_memory, slaves[i]->file_path, buffer, slaves[i]->pid);
 
-            }
+            } 
         }
     }
 
@@ -132,17 +128,22 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt
 }
 
 uint32_t initial_files_per_slave(uint32_t files, uint32_t slave_count) {
-    if(files < MIN_FILES) {
+    if (files < MIN_FILES) {
         return 1;
     }
-
-    uint32_t initial_files = (uint32_t) files * 0.1f;
-    return (uint32_t) initial_files / slave_count;
+    if (slave_count == 0) {
+        return 0; // Prevent division by zero
+    }
+    uint32_t initial_files = (uint32_t)(files * 0.1f);
+    uint32_t files_per_slave = initial_files / slave_count;
+    return files_per_slave > 0 ? files_per_slave : 1; // Ensure at least 1 file per slave
 }
+
 
 uint32_t slave_count(uint32_t files) {
     if (files < MIN_FILES) {
         return files > DEFAULT_SLAVE_COUNT ? DEFAULT_SLAVE_COUNT : files;
     }
-    return (uint32_t) files * 0.05f;
+    uint32_t count = (uint32_t)(files * 0.05f);
+    return count > 0 ? count : DEFAULT_SLAVE_COUNT; 
 }
