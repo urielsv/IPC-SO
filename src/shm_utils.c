@@ -1,6 +1,7 @@
 // This is a personal academic project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "include/shm_utils.h"
+#include <errno.h>
 
 
 int  shm_open_util(char *const shm_path, int flags, char *const shm_error) {
@@ -44,6 +45,10 @@ void close_semaphore(sem_t *semaphore, char *const sem_path) {
     }
 
     if (sem_unlink(sem_path) == -1) {
+        if(errno == ENOENT) {
+            return;
+        }
+
         fprintf(stderr, "Error: Could not unlink semaphore during close_semaphore for sem: %s\n", sem_path);
         perror("sem_unlink");
         exit(EXIT_FAILURE);

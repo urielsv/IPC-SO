@@ -29,9 +29,11 @@
     printf("%s\n", get_buff_sem_path(shared_memory));
     printf("%s\n", get_mutex_sem_path(shared_memory));
     fflush(stdout);
+    
+    sleep(VIEW_SLEEP_TIME);
 
-     // Give time for the user to init the view before starting the slaves
-     sleep(VIEW_SLEEP_TIME);
+    
+    // Give time for the user to init the view before starting the slaves
 
     int files = argc - 1;
 
@@ -47,6 +49,9 @@
         fprintf(stderr, "Error: Could not initialize slaves\n");
         return 1;
     }
+    set_processed_files(files_assigned, shared_memory);
+
+    // write the initial files to the shared memory
 
     int output_file_fd;
     if ( (output_file_fd = open("output.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644) ) == -1) {
@@ -54,17 +59,19 @@
         return 1;
     }
 
-    // Now we start processing the remaining files
-     while (get_processed_files(shared_memory) < files) {
 
-         // Check if any slave is available
+    // Now we start processing the remaining files
+    while (get_processed_files(shared_memory) < files) {
+
+          // Check if any slave is available
         for (int i = 0; i < assigned_slaves; i++) {
             if (slaves[i]->is_available && files_assigned < files) {
                 assign_file(slaves[i], argv[++files_assigned]);
             }
+            
         }
         output_from_slaves(slaves, assigned_slaves, shared_memory);
-     }
+    }
 
     // Now we write to the shm an empty string to signal the view process that we are done
     write_shared_memory(shared_memory, "", "", 0);
@@ -80,7 +87,7 @@
      return 0;
  }
 
-int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt shared_memory) {
+char* output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt shared_memory) {
     fd_set read_fds;
 
     FD_ZERO(&read_fds);
@@ -113,14 +120,13 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt
             char buffer[BUFF_SIZE] = {0};
 
             ssize_t bytes_read = read_pipe(slaves[i]->slave2_master_fd[0], "output_from_slaves", buffer, sizeof(buffer));
-
+            // fprintf(stderr, "\nRead: (file: %s) %s\n", slaves[i]->file_path, buffer);
             if (bytes_read > 0) {
-                slaves[i]->is_available = 1;
 
                 // Add a null terminator to the buffer so we can avoid printing garbage
                 buffer[bytes_read] = '\0';
-
                 write_shared_memory(shared_memory, slaves[i]->file_path, buffer, slaves[i]->pid);
+                slaves[i]->is_available = 1;
 
             } 
         }
@@ -131,7 +137,7 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt
 
 uint32_t initial_files_per_slave(uint32_t files, uint32_t slave_count) {
     if (files < MIN_FILES) {
-        return 1;
+        return 2;
     }
     if (slave_count == 0) {
         return 0; // Prevent division by zero

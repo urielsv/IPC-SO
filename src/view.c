@@ -19,8 +19,9 @@ int main(int argc, char *argv[]) {
     char file_path[BUFF_SIZE];
     char md5[ENC_SIZE + 1];
     char slave_id[PID_MAX_SIZE];
+    int i =0;
     while (read_shared_memory(shared_memory, file_path, md5, slave_id) > 0) {
-        fprintf(stderr, "(file: %s) %s, %s\n", file_path, md5, slave_id);
+        fprintf(stderr, "(file: %d %s) %s, %s\n", i++, file_path, md5, slave_id);
     }
 
     printf("\nfinishing\n");
@@ -63,6 +64,7 @@ void load_parameters(int argc, char *argv[], char **shm_path, char **buff_sem_pa
         *shm_path = strdup(argv[1]);
         *buff_sem_path = strdup(argv[2]);
         *mutex_sem_path = strdup(argv[3]);
+        printf("%s, %s, %s", *shm_path, *buff_sem_path, *mutex_sem_path);
         return;
     }
 
