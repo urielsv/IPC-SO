@@ -139,8 +139,10 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt
 }
 
 uint32_t initial_files_per_slave(uint32_t files, uint32_t slave_count) {
-    if (files < MIN_FILES) {
-        return 2;
+    //TODO fix initial files per slave
+    return 1;
+   /* if (files < MIN_FILES) {
+        return 1;
     }
     if (slave_count == 0) {
         return 0; // Prevent division by zero
@@ -148,6 +150,7 @@ uint32_t initial_files_per_slave(uint32_t files, uint32_t slave_count) {
     uint32_t initial_files = (uint32_t)(files * 0.1f);
     uint32_t files_per_slave = initial_files / slave_count;
     return files_per_slave > 0 ? files_per_slave : 1; // Ensure at least 1 file per slave
+    */
 }
 
 
