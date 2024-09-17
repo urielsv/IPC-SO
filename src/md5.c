@@ -125,7 +125,7 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt
 
                 // Add a null terminator to the buffer so we can avoid printing garbage
                 buffer[bytes_read] = '\0';
-                char string[1048] = {0};
+                char string[BUFF_SIZE*4] = {0};
                 snprintf(string, sizeof(buffer), "-------------------\nname: ./%s\nmd5: %s\nPID: %d\n-------------------\n", slaves[i]->file_path,buffer,slaves[i]->pid);   
                 write(output_file_fd,string,strlen(string));
                 write_shared_memory(shared_memory, slaves[i]->file_path, buffer, slaves[i]->pid);
