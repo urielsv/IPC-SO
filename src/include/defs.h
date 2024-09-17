@@ -5,7 +5,7 @@
 #define DEFAULT_SLAVE_COUNT     3
 #define MD5_HASH                32
 #define INITIAL_SEM_MUTEX       1
-#define VIEW_SLEEP_TIME         5
+#define VIEW_SLEEP_TIME         7
 #define BUF_FILE_PATH_SIZE      128
 #define PID_MAX_SIZE            6
 

@@ -70,7 +70,7 @@
             }
             
         }
-        output_from_slaves(slaves, assigned_slaves, shared_memory);
+        output_from_slaves(slaves, assigned_slaves, shared_memory,output_file_fd);
     }
 
     // Now we write to the shm an empty string to signal the view process that we are done
@@ -87,7 +87,7 @@
      return 0;
  }
 
-int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt shared_memory) {
+int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt shared_memory,int output_file_fd) {
     fd_set read_fds;
 
     FD_ZERO(&read_fds);
@@ -125,6 +125,9 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt
 
                 // Add a null terminator to the buffer so we can avoid printing garbage
                 buffer[bytes_read] = '\0';
+                char string[1048] = {0};
+                snprintf(string, sizeof(buffer), "-------------------\nname: ./%s\nmd5: %s\nPID: %d\n-------------------\n", slaves[i]->file_path,buffer,slaves[i]->pid);   
+                write(output_file_fd,string,strlen(string));
                 write_shared_memory(shared_memory, slaves[i]->file_path, buffer, slaves[i]->pid);
                 slaves[i]->is_available = 1;
 
