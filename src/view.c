@@ -17,8 +17,9 @@ int main(int argc, char *argv[]) {
     char file_path[BUFF_SIZE];
     char md5[ENC_SIZE + 1];
     char slave_id[PID_MAX_SIZE];
+    int i =0;
     while (read_shared_memory(shared_memory, file_path, md5, slave_id) > 0) {
-        fprintf(stderr, "(file: %s) %s, %s\n", file_path, md5, slave_id);
+        fprintf(stderr, "(file: %d %s) %s, %s\n", i++, file_path, md5, slave_id);
     }
 
     printf("\nfinishing\n");

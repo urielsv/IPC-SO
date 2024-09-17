@@ -32,7 +32,7 @@ static char *mmap_buffer(int fd, size_t buffer_size, int flags) {
         flags,
         MAP_SHARED,
         fd,
-        0
+        0   
     );
 }
 
@@ -92,7 +92,7 @@ shared_memory_adt attach_shared_memory(char *shm_path, char *full_buff_sem_path,
     shared_memory->mutex_sem->sem_path = mutex_sem_path;
 
     open_semaphores(shared_memory);
-
+        shared_memory->buffer->size = buffer_size;
      shared_memory->buffer->read = 0;
      shared_memory->buffer->written = 0;
 
@@ -223,7 +223,8 @@ size_t read_shared_memory(shared_memory_adt shared_memory, char *file_path, char
     semaphore_down(shared_memory->full_buff_sem->semaphore);
     semaphore_down(shared_memory->mutex_sem->semaphore);
 
-    char *read_ptr = shared_memory->buffer->base_addr + shared_memory->buffer->read % shared_memory->buffer->size;
+    shared_memory->buffer->read %= shared_memory->buffer->size;
+    char *read_ptr = shared_memory->buffer->base_addr + shared_memory->buffer->read;
     // if we read the null terminator we have reached the end of the buffer
     if (*read_ptr == '\0') {
         semaphore_up(shared_memory->mutex_sem->semaphore);
@@ -317,6 +318,7 @@ void deattach_shared_memory(shared_memory_adt shared_memory) {
 
     if (shared_memory->full_buff_sem != NULL && shared_memory->mutex_sem != NULL) {
         destroy_semaphores(shared_memory);
+        ;
     }
 
     if (shared_memory->buffer != NULL) {
