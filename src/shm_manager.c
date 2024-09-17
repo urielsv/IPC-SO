@@ -1,3 +1,5 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "include/shm_manager.h"
 
 typedef struct buffer_t {
@@ -231,6 +233,7 @@ size_t read_shared_memory(shared_memory_adt shared_memory, char *file_path, char
         return 0;
     }
 
+
     size_t total_size = 0;
 
     size_t curr_size = 0;
@@ -329,6 +332,10 @@ void deattach_shared_memory(shared_memory_adt shared_memory) {
     }
 
     free(shared_memory);
+}
+
+void set_processed_files(size_t files, shared_memory_adt shared_memory) {
+    shared_memory->files_processed = files;
 }
 
 size_t get_processed_files(shared_memory_adt shared_memory) {

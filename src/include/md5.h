@@ -8,7 +8,7 @@
 
 
 // int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt shared_memory, int output_file);
-int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt shared_memory);
+int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt shared_memory,int output_file_fd);
 uint32_t initial_files_per_slave(uint32_t files, uint32_t slave_count);
 uint32_t slave_count(uint32_t files);
 

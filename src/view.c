@@ -1,14 +1,26 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "include/view.h"
 
 int main(int argc, char *argv[]) {
 
-
-    setvbuf_pipe(stdin, "view process (stdin)");
-    setvbuf_pipe(stdout, "view process (stdout)");
-
     char *shm_path = NULL;
     char *buff_sem_path = NULL;
     char *mutex_sem_path = NULL;
+
+    if (argc>1){
+
+        if (argc!=4){
+            fprintf(stderr, "Only three parameters are allowed for the view process\n");
+            exit(EXIT_FAILURE);
+        }
+
+    }
+    else {
+        setvbuf_pipe(stdin, "view process (stdin)");
+        setvbuf_pipe(stdout, "view process (stdout)");
+    }
+
     load_parameters(argc, argv, &shm_path, &buff_sem_path, &mutex_sem_path);
 
     shared_memory_adt shared_memory = attach_shared_memory(shm_path, buff_sem_path, mutex_sem_path, SHM_BUFFER_SIZE);
@@ -62,6 +74,7 @@ void load_parameters(int argc, char *argv[], char **shm_path, char **buff_sem_pa
         *shm_path = strdup(argv[1]);
         *buff_sem_path = strdup(argv[2]);
         *mutex_sem_path = strdup(argv[3]);
+        printf("%s, %s, %s", *shm_path, *buff_sem_path, *mutex_sem_path);
         return;
     }
 

@@ -1,3 +1,5 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 /*
 
 ** Author: Fernando Li                      <feli@itba.edu.ar>
@@ -95,6 +97,10 @@ int assign_file(slave_t *slave, char *const file_path) {
 }
 
 
+
+
+
+
 void debug_slave(slave_t *slave) {
     printf("--- Slave Debug ---\n");
     printf("Slave %d\n", slave->pid);
@@ -149,6 +155,7 @@ pid_t create_slave(slave_t *slave, char *const files_path[], uint32_t files_coun
         
         // Assign initial files 
         for (int i = 0; i < files_count; i++) {
+            fprintf(stderr, "Assigning file %s to slave\n", files_path[i]);
             if (assign_file(slave, files_path[i]) == -1) {
                 fprintf(stderr, "Error: Could not assign file to slave\n");
                 exit(EXIT_FAILURE);
