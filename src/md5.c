@@ -118,15 +118,17 @@ int output_from_slaves(slave_t **slaves, uint16_t slave_count, shared_memory_adt
     for (int i = 0; i < slave_count; i++) {
         if (FD_ISSET(slaves[i]->slave2_master_fd[0], &read_fds)) {
             char buffer[BUFF_SIZE] = {0};
-
+            char auxBuff[BUFF_SIZE]={0};
             ssize_t bytes_read = read_pipe(slaves[i]->slave2_master_fd[0], "output_from_slaves", buffer, sizeof(buffer));
             // fprintf(stderr, "\nRead: (file: %s) %s\n", slaves[i]->file_path, buffer);
             if (bytes_read > 0) {
 
                 // Add a null terminator to the buffer so we can avoid printing garbage
                 buffer[bytes_read] = '\0';
+
+                int required_size = snprintf(NULL, 0, "-------------------\nname: ./%s\nmd5: %s\nPID: %d\n-------------------\n",slaves[i]->file_path, auxBuff, slaves[i]->pid);
                 char string[BUFF_SIZE*4] = {0};
-                snprintf(string, sizeof(buffer), "-------------------\nname: ./%s\nmd5: %s\nPID: %d\n-------------------\n", slaves[i]->file_path,buffer,slaves[i]->pid);   
+                snprintf(string, required_size, "-------------------\nname: ./%s\nmd5: %s\nPID: %d\n-------------------\n", slaves[i]->file_path,buffer,slaves[i]->pid);   
                 write(output_file_fd,string,strlen(string));
                 write_shared_memory(shared_memory, slaves[i]->file_path, buffer, slaves[i]->pid);
                 slaves[i]->is_available = 1;
